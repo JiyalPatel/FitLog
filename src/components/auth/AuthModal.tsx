@@ -101,10 +101,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         <div className="flex items-center justify-between pb-2 border-b border-zinc-900">
           <div>
             <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-              SUPABASE CLOUD SYNC
+              ACCOUNT & BACKUP
             </span>
             <h2 className="text-xl font-bold tracking-tight text-white mt-0.5">
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              {isSignUp ? 'Create Free Account' : 'Sign In'}
             </h2>
           </div>
           <button onClick={onClose} className="p-1.5 text-zinc-500 hover:text-white rounded-lg">
@@ -116,9 +116,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400 flex items-start space-x-2.5">
           <CloudUpload className="w-4 h-4 text-white mt-0.5 flex-shrink-0" />
           <div>
-            <span className="font-semibold text-white">Seamless Cloud Migration</span>
+            <span className="font-semibold text-white">Safe & Automatic Backup</span>
             <p className="mt-0.5 leading-relaxed text-[11px]">
-              All your local workouts, PRs, and routines will be automatically synced to your cloud account.
+              All workouts, personal records, and routines on this device will be automatically saved to your account so you never lose your progress.
             </p>
           </div>
         </div>
@@ -181,7 +181,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
             disabled={loading || isMigrating}
             className="w-full py-3 bg-white text-black font-semibold font-mono text-xs tracking-wider rounded-xl shadow-glow-sm hover:bg-zinc-100 transition-colors uppercase disabled:opacity-50"
           >
-            {loading ? 'PROCESSING...' : isSignUp ? 'CREATE & MIGRATE' : 'SIGN IN & SYNC'}
+            {loading ? 'SAVING...' : isSignUp ? 'CREATE ACCOUNT & BACK UP' : 'SIGN IN & RESTORE'}
           </motion.button>
         </form>
 

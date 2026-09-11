@@ -57,7 +57,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-4 shadow-xl">
         <div className="flex items-center space-x-3">
           <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-mono font-bold text-white text-lg">
-            {profile.isGuest ? 'G' : profile.displayName.charAt(0).toUpperCase()}
+            {profile.isGuest ? 'A' : profile.displayName.charAt(0).toUpperCase()}
           </div>
           <div>
             <div className="flex items-center space-x-2">
@@ -69,11 +69,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     : 'bg-white text-black font-semibold border-white'
                 }`}
               >
-                {profile.isGuest ? 'GUEST MODE' : 'CLOUD ACCOUNT'}
+                {profile.isGuest ? 'OFFLINE JOURNAL' : 'SAVED TO ACCOUNT'}
               </span>
             </div>
             <p className="text-xs text-zinc-500 font-mono mt-0.5">
-              {profile.email || 'Local device storage · Offline ready'}
+              {profile.email || 'Saved on this phone · Always ready'}
             </p>
           </div>
         </div>
@@ -84,7 +84,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             className="w-full py-3 px-4 rounded-xl bg-white text-black font-semibold text-xs font-mono tracking-wider flex items-center justify-center space-x-2 shadow-glow-sm hover:bg-zinc-200 transition-colors uppercase"
           >
             <CloudUpload className="w-4 h-4" />
-            <span>CONNECT SUPABASE & SYNC CLOUD</span>
+            <span>SAVE WORKOUTS TO FREE ACCOUNT</span>
           </button>
         ) : (
           <button
@@ -130,7 +130,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="flex items-center justify-between pt-2 border-t border-zinc-900">
           <div>
             <div className="text-sm font-semibold text-white">Default Rest Interval</div>
-            <div className="text-xs text-zinc-500 font-mono">Auto-starts after set completion</div>
+            <div className="text-xs text-zinc-500 font-mono">Countdown starts after each finished set</div>
           </div>
           <div className="flex items-center space-x-1 text-xs font-mono">
             {[60, 90, 120, 180].map((sec) => (
@@ -152,8 +152,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {/* Sound Effects Toggle */}
         <div className="flex items-center justify-between pt-2 border-t border-zinc-900">
           <div>
-            <div className="text-sm font-semibold text-white">Audio & Haptic Chimes</div>
-            <div className="text-xs text-zinc-500 font-mono">Synthesizer for timer & PR celebrations</div>
+            <div className="text-sm font-semibold text-white">Sound Effects & Chimes</div>
+            <div className="text-xs text-zinc-500 font-mono">Timer alerts and Personal Record chimes</div>
           </div>
           <button
             onClick={() => onUpdateProfile({ ...profile, soundEnabled: !profile.soundEnabled })}
@@ -172,26 +172,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Supabase Status Banner */}
+      {/* Backup & Sync Status Banner */}
       <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-2 shadow-xl">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-            <Database className="w-3.5 h-3.5 text-white" /> Cloud Backend Status
+            <Database className="w-3.5 h-3.5 text-white" /> Workout Backup Status
           </span>
           <span
             className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-              isSupabaseConfigured
+              !profile.isGuest
                 ? 'bg-zinc-900 text-zinc-300 border-zinc-700'
                 : 'bg-zinc-900 text-zinc-500 border-zinc-800'
             }`}
           >
-            {isSupabaseConfigured ? 'CONNECTED' : 'LOCAL FALLBACK'}
+            {!profile.isGuest ? 'BACKED UP ONLINE' : 'SAVED ON THIS DEVICE'}
           </span>
         </div>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          {isSupabaseConfigured
-            ? 'Supabase backend is configured and ready for live cloud synchronization.'
-            : 'Supabase credentials are not yet defined in environment. The application runs autonomously in offline-first Guest Mode.'}
+          {!profile.isGuest
+            ? 'All your workouts, personal records, and routines are safely backed up to your account.'
+            : 'Your workout history is currently saved on this phone. Create a free account to back up your progress and sync it across any device.'}
         </p>
       </div>
 

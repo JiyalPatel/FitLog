@@ -14,14 +14,14 @@ export const Header: React.FC<HeaderProps> = ({ profile, streak, onOpenProfile }
     <header className="sticky top-0 z-40 w-full bg-black/80 backdrop-blur-md border-b border-surface-300 px-4 py-3 flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center font-mono font-black text-black text-base shadow-glow-sm">
-          N
+          F
         </div>
         <div>
           <h1 className="text-sm font-semibold tracking-wider uppercase text-white font-mono leading-none m-0">
-            NOIR FIT
+            FITLOG
           </h1>
           <span className="text-[10px] text-zinc-500 font-mono">
-            {profile.isGuest ? 'GUEST MODE' : 'CLOUD SYNC'}
+            {profile.isGuest ? 'OFFLINE JOURNAL' : 'SAVED TO ACCOUNT'}
           </span>
         </div>
       </div>

@@ -167,10 +167,10 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
       {/* Header */}
       <div>
         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-          ROUTINE ARCHITECTURE
+          WORKOUT SCHEDULE
         </span>
         <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
-          Sequential Routine
+          Your Workout Routine
         </h2>
         <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
           Your routine sequence is continuous. Missed days roll forward automatically so you never lose momentum.
@@ -372,10 +372,10 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
         </div>
       )}
 
-      {/* Preset Routine Template Switcher */}
+      {/* Popular Routine Splits Switcher */}
       <div className="space-y-3 pt-2">
         <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-white" /> Preset Routine Architecture
+          <Sparkles className="w-3.5 h-3.5 text-white" /> Popular Workout Splits
         </h3>
 
         <div className="space-y-2">
@@ -408,7 +408,7 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
                 }}
                 className="ml-3 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 hover:text-white hover:border-zinc-600 flex-shrink-0"
               >
-                APPLY
+                LOAD SPLIT
               </button>
             </div>
           ))}

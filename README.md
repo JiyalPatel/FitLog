@@ -1,6 +1,6 @@
-# NOIR FIT — Minimalist Mobile-First Fitness Tracker
+# FitLog — Minimalist Mobile-First Fitness Tracker
 
-A modern, mobile-first fitness tracking web application built with a **Noir / Black & White Minimalist Luxury aesthetic**, fluid micro-animations, a sequential rolling missed-workout queue, previous workout memory, live PR tracking, workout scoring (0–100), progressive overload suggestions, and dual-mode operation (instant offline Guest mode + Supabase Cloud account mode with 1-click migration).
+A modern, mobile-first fitness tracking web application built with a **Noir / Black & White Minimalist Luxury aesthetic**, fluid micro-animations, a sequential rolling missed-workout queue, previous workout memory, live PR tracking, workout scoring (0–100), progressive overload suggestions, and dual-mode operation (instant offline Guest mode + Cloud account backup with 1-click migration).
 
 ---
 

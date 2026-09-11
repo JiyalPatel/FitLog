@@ -1,5 +1,4 @@
-// src/components/profile/ProfileView.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   User, 
   ShieldCheck, 
@@ -16,6 +15,7 @@ import {
 import { UserProfile } from '../../types';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { localStore } from '../../services/storage/localStorageStore';
+import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -30,6 +30,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenAuth,
   onSignOut,
 }) => {
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+
   const handleSignOut = async () => {
     if (supabase) {
       await supabase.auth.signOut();
@@ -37,11 +39,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     onSignOut?.();
   };
 
-  const handleResetData = () => {
-    if (confirm('Reset your workout data? This will give you a clean slate.')) {
-      localStore.clearAllData();
-      window.location.reload();
-    }
+  const handleConfirmReset = () => {
+    localStore.clearAllData();
+    window.location.reload();
   };
 
   return (
@@ -176,10 +176,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* Backup & Sync Status Banner */}
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-2 shadow-xl">
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3 shadow-xl">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-            <Database className="w-3.5 h-3.5 text-white" /> Workout Backup Status
+            <Database className="w-3.5 h-3.5 text-white" /> Cloud Backup Status
           </span>
           <span
             className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
@@ -188,26 +188,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 : 'bg-zinc-900 text-zinc-500 border-zinc-800'
             }`}
           >
-            {!profile.isGuest ? 'BACKED UP ONLINE' : 'SAVED ON THIS DEVICE'}
+            {!profile.isGuest ? 'SAVED TO ACCOUNT' : 'SAVED ON THIS DEVICE'}
           </span>
         </div>
+
+        <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between text-xs font-mono">
+          <div className="flex items-center space-x-2">
+            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="text-zinc-300">Supabase Cloud</span>
+          </div>
+          <span className="text-[11px] text-zinc-400 font-mono">
+            {isSupabaseConfigured ? 'CONNECTED' : 'NOT CONNECTED'}
+          </span>
+        </div>
+
         <p className="text-xs text-zinc-400 leading-relaxed">
           {!profile.isGuest
-            ? 'All your workouts, personal records, and routines are safely backed up to your account.'
-            : 'Your workout history is currently saved on this phone. Create a free account to back up your progress and sync it across any device.'}
+            ? 'All your workouts, personal records, and routines are safely backed up to your Supabase cloud database.'
+            : 'Your workout history is currently saved on this phone. Create a free account or sign in to sync all your workouts safely to your Supabase cloud.'}
         </p>
       </div>
 
       {/* Reset Data Danger Zone */}
       <div className="pt-2">
         <button
-          onClick={handleResetData}
+          onClick={() => setShowResetConfirm(true)}
           className="w-full py-2.5 rounded-xl border border-zinc-900 bg-zinc-950 text-xs font-mono text-zinc-500 hover:text-zinc-300 hover:border-zinc-800 flex items-center justify-center space-x-2 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>RESET TO SAMPLE DEMO DATA</span>
+          <span>CLEAR ALL SAVED WORKOUTS</span>
         </button>
       </div>
+
+      {/* Custom Dark Confirmation Modal */}
+      <ConfirmDialogModal
+        isOpen={showResetConfirm}
+        title="Clear Workout Data?"
+        message="This will delete all saved workouts and records from this device so you can start completely fresh. Your workout routines will remain intact."
+        confirmLabel="CLEAR DATA"
+        cancelLabel="CANCEL"
+        isDestructive={true}
+        onConfirm={handleConfirmReset}
+        onCancel={() => setShowResetConfirm(false)}
+      />
     </div>
   );
 };

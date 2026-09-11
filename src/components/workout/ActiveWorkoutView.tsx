@@ -71,14 +71,10 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
   // Elapsed workout timer effect
   useEffect(() => {
     const timer = setInterval(() => {
-      setElapsedSeconds((prev) => {
-        const next = prev + 1;
-        onUpdateSession({ ...session, durationSeconds: next });
-        return next;
-      });
+      setElapsedSeconds((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [session, onUpdateSession]);
+  }, []);
 
   // Rest Timer Countdown effect
   useEffect(() => {
@@ -335,7 +331,10 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
             {/* Finish CTA */}
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={onFinishWorkout}
+              onClick={() => {
+                onUpdateSession({ ...session, durationSeconds: elapsedSeconds });
+                onFinishWorkout();
+              }}
               className="px-3.5 py-1.5 bg-white text-black font-semibold text-xs font-mono rounded-lg shadow-glow-sm hover:bg-zinc-200 transition-colors"
             >
               FINISH

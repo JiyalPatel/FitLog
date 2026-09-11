@@ -5,14 +5,16 @@ import {
   Trash2, 
   ArrowUp, 
   ArrowDown, 
-  CalendarRange, 
   Sparkles, 
-  Check, 
-  ChevronRight,
+  Share2,
   Dumbbell
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Routine, RoutineDay, ExerciseTarget, MuscleGroup } from '../../types';
+import { Routine, RoutineDay, ExerciseTarget } from '../../types';
+import { ExercisePickerModal } from '../common/ExercisePickerModal';
+import { AddDayModal } from './AddDayModal';
+import { RoutineImportExportModal } from './RoutineImportExportModal';
+import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
+import { StandardExercise } from '../../services/data/standardExercises';
 
 interface RoutineManagerViewProps {
   routine: Routine;
@@ -24,28 +26,87 @@ const PRESET_TEMPLATES = [
     name: 'Push Pull Legs (PPL)',
     description: '6-day cycle for balanced hypertrophy and recovery.',
     days: [
-      { name: 'Push', muscle: 'Chest / Delts / Triceps', exercisesCount: 6 },
-      { name: 'Pull', muscle: 'Back / Biceps / Rear Delts', exercisesCount: 6 },
-      { name: 'Legs', muscle: 'Quads / Hamstrings / Calves', exercisesCount: 5 },
+      {
+        name: 'Push',
+        muscle: 'Chest / Delts / Triceps',
+        exercises: [
+          { name: 'Barbell Bench Press', muscleGroup: 'Chest', sets: 4, minReps: 6, maxReps: 10 },
+          { name: 'Incline Dumbbell Press', muscleGroup: 'Chest', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Pec Dec Fly', muscleGroup: 'Chest', sets: 3, minReps: 12, maxReps: 15 },
+          { name: 'Dumbbell Shoulder Press', muscleGroup: 'Shoulders', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Lateral Raise (Dumbbell)', muscleGroup: 'Shoulders', sets: 4, minReps: 12, maxReps: 15 },
+          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 15 },
+        ],
+      },
+      {
+        name: 'Pull',
+        muscle: 'Back / Biceps / Rear Delts',
+        exercises: [
+          { name: 'Lat Pulldown', muscleGroup: 'Back', sets: 4, minReps: 8, maxReps: 12 },
+          { name: 'Barbell Bent Over Row', muscleGroup: 'Back', sets: 4, minReps: 8, maxReps: 10 },
+          { name: 'Seated Cable Row', muscleGroup: 'Back', sets: 3, minReps: 10, maxReps: 12 },
+          { name: 'Face Pull', muscleGroup: 'Shoulders', sets: 3, minReps: 15, maxReps: 20 },
+          { name: 'Incline Dumbbell Curl', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 12 },
+          { name: 'Hammer Curl', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 15 },
+        ],
+      },
+      {
+        name: 'Legs',
+        muscle: 'Quads / Hamstrings / Calves',
+        exercises: [
+          { name: 'Barbell Back Squat', muscleGroup: 'Legs', sets: 4, minReps: 6, maxReps: 10 },
+          { name: 'Romanian Deadlift (RDL)', muscleGroup: 'Legs', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Leg Press', muscleGroup: 'Legs', sets: 3, minReps: 10, maxReps: 15 },
+          { name: 'Lying Leg Curl', muscleGroup: 'Legs', sets: 3, minReps: 12, maxReps: 15 },
+          { name: 'Standing Calf Raise', muscleGroup: 'Legs', sets: 4, minReps: 15, maxReps: 20 },
+        ],
+      },
     ],
   },
   {
     name: 'Upper / Lower Split',
     description: '4-day split optimal for strength and frequency.',
     days: [
-      { name: 'Upper A', muscle: 'Chest / Back / Arms', exercisesCount: 6 },
-      { name: 'Lower A', muscle: 'Squat / Hamstrings', exercisesCount: 5 },
-      { name: 'Upper B', muscle: 'Incline / Rows / Delts', exercisesCount: 6 },
-      { name: 'Lower B', muscle: 'Deadlift / Quads', exercisesCount: 5 },
+      {
+        name: 'Upper Body A',
+        muscle: 'Chest / Back / Arms',
+        exercises: [
+          { name: 'Barbell Bench Press', muscleGroup: 'Chest', sets: 4, minReps: 6, maxReps: 10 },
+          { name: 'Barbell Bent Over Row', muscleGroup: 'Back', sets: 4, minReps: 6, maxReps: 10 },
+          { name: 'Dumbbell Shoulder Press', muscleGroup: 'Shoulders', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Lat Pulldown', muscleGroup: 'Back', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 12 },
+          { name: 'Incline Dumbbell Curl', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 12 },
+        ],
+      },
+      {
+        name: 'Lower Body A',
+        muscle: 'Squat / Hamstrings / Calves',
+        exercises: [
+          { name: 'Barbell Back Squat', muscleGroup: 'Legs', sets: 4, minReps: 6, maxReps: 8 },
+          { name: 'Romanian Deadlift (RDL)', muscleGroup: 'Legs', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Leg Extension', muscleGroup: 'Legs', sets: 3, minReps: 12, maxReps: 15 },
+          { name: 'Lying Leg Curl', muscleGroup: 'Legs', sets: 3, minReps: 12, maxReps: 15 },
+          { name: 'Standing Calf Raise', muscleGroup: 'Legs', sets: 4, minReps: 15, maxReps: 20 },
+        ],
+      },
     ],
   },
   {
-    name: 'Full Body Routine',
-    description: '3-day foundational routine for overall conditioning.',
+    name: 'Full Body Foundational',
+    description: '3-day foundational routine for overall strength.',
     days: [
-      { name: 'Full Body A', muscle: 'Squat / Bench / Row', exercisesCount: 5 },
-      { name: 'Full Body B', muscle: 'Deadlift / OHP / Pullup', exercisesCount: 5 },
-      { name: 'Full Body C', muscle: 'Leg Press / Incline / Arms', exercisesCount: 5 },
+      {
+        name: 'Full Body A',
+        muscle: 'Squat / Bench / Row',
+        exercises: [
+          { name: 'Barbell Back Squat', muscleGroup: 'Legs', sets: 3, minReps: 6, maxReps: 8 },
+          { name: 'Barbell Bench Press', muscleGroup: 'Chest', sets: 3, minReps: 8, maxReps: 10 },
+          { name: 'Lat Pulldown', muscleGroup: 'Back', sets: 3, minReps: 8, maxReps: 12 },
+          { name: 'Lateral Raise (Dumbbell)', muscleGroup: 'Shoulders', sets: 3, minReps: 12, maxReps: 15 },
+          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Arms', sets: 2, minReps: 12, maxReps: 15 },
+        ],
+      },
     ],
   },
 ];
@@ -55,12 +116,14 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
   onSaveRoutine,
 }) => {
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0);
-  const [showAddExercise, setShowAddExercise] = useState<boolean>(false);
-  const [newExerciseName, setNewExerciseName] = useState<string>('');
-  const [newExerciseMuscle, setNewExerciseMuscle] = useState<MuscleGroup>('Chest');
-  const [newExerciseSets, setNewExerciseSets] = useState<number>(3);
-  const [newExerciseRepsMin, setNewExerciseRepsMin] = useState<number>(8);
-  const [newExerciseRepsMax, setNewExerciseRepsMax] = useState<number>(12);
+
+  // Modals state
+  const [isAddDayOpen, setIsAddDayOpen] = useState<boolean>(false);
+  const [isExercisePickerOpen, setIsExercisePickerOpen] = useState<boolean>(false);
+  const [isImportExportOpen, setIsImportExportOpen] = useState<boolean>(false);
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
+  const [confirmSplitTemplate, setConfirmSplitTemplate] = useState<any | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const currentDay = routine.days[selectedDayIdx] || routine.days[0];
 
@@ -74,7 +137,6 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
     newDays[idx] = newDays[targetIdx];
     newDays[targetIdx] = temp;
 
-    // Update dayOrder
     newDays.forEach((d, i) => {
       d.dayOrder = i;
     });
@@ -84,26 +146,13 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
   };
 
   // Add a new workout day
-  const handleAddDay = () => {
-    const dayName = prompt('Enter Day Name (e.g., Arms & Shoulders, Cardio & Abs):');
-    if (!dayName || !dayName.trim()) return;
-
+  const handleAddDay = (name: string, estimatedMinutes: number) => {
     const newDay: RoutineDay = {
       id: `day-${Date.now()}`,
-      name: dayName.trim(),
+      name,
       dayOrder: routine.days.length,
-      estimatedMinutes: 45,
-      exercises: [
-        {
-          id: `ex-${Date.now()}`,
-          name: 'Primary Compound Lift',
-          muscleGroup: 'Chest',
-          targetSets: 3,
-          targetRepsMin: 8,
-          targetRepsMax: 12,
-          orderIndex: 0,
-        },
-      ],
+      estimatedMinutes,
+      exercises: [],
     };
 
     const newDays = [...routine.days, newDay];
@@ -111,32 +160,35 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
     setSelectedDayIdx(newDays.length - 1);
   };
 
-  // Delete day
-  const handleDeleteDay = (idx: number) => {
+  // Confirm delete day
+  const handleDeleteDayConfirm = () => {
+    if (confirmDeleteIdx === null) return;
+
     if (routine.days.length <= 1) {
-      alert('Routine must have at least 1 workout day.');
+      setInfoMessage('Your routine must have at least 1 workout day.');
+      setConfirmDeleteIdx(null);
       return;
     }
-    const newDays = routine.days.filter((_, i) => i !== idx);
+
+    const newDays = routine.days.filter((_, i) => i !== confirmDeleteIdx);
     newDays.forEach((d, i) => {
       d.dayOrder = i;
     });
+
     onSaveRoutine({ ...routine, days: newDays });
-    setSelectedDayIdx(Math.max(0, idx - 1));
+    setSelectedDayIdx(Math.max(0, confirmDeleteIdx - 1));
+    setConfirmDeleteIdx(null);
   };
 
-  // Add exercise to current day
-  const handleAddExerciseToDay = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newExerciseName.trim()) return;
-
+  // Add exercise from picker modal
+  const handleSelectExercise = (exercise: StandardExercise) => {
     const newEx: ExerciseTarget = {
       id: `ex-${Date.now()}`,
-      name: newExerciseName.trim(),
-      muscleGroup: newExerciseMuscle,
-      targetSets: newExerciseSets,
-      targetRepsMin: newExerciseRepsMin,
-      targetRepsMax: newExerciseRepsMax,
+      name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      targetSets: exercise.defaultSets,
+      targetRepsMin: exercise.defaultRepsMin,
+      targetRepsMax: exercise.defaultRepsMax,
       orderIndex: currentDay.exercises.length,
     };
 
@@ -147,8 +199,7 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
     };
 
     onSaveRoutine({ ...routine, days: updatedDays });
-    setNewExerciseName('');
-    setShowAddExercise(false);
+    setIsExercisePickerOpen(false);
   };
 
   // Remove exercise from day
@@ -162,19 +213,63 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
     onSaveRoutine({ ...routine, days: updatedDays });
   };
 
+  // Apply preset template
+  const handleApplyTemplate = () => {
+    if (!confirmSplitTemplate) return;
+
+    const newDays: RoutineDay[] = confirmSplitTemplate.days.map((d: any, dIdx: number) => ({
+      id: `day-${Date.now()}-${dIdx}`,
+      name: d.name,
+      dayOrder: dIdx,
+      estimatedMinutes: 50,
+      exercises: d.exercises.map((e: any, eIdx: number) => ({
+        id: `ex-${Date.now()}-${dIdx}-${eIdx}`,
+        name: e.name,
+        muscleGroup: e.muscleGroup,
+        targetSets: e.sets,
+        targetRepsMin: e.minReps,
+        targetRepsMax: e.maxReps,
+        orderIndex: eIdx,
+      })),
+    }));
+
+    const updatedRoutine: Routine = {
+      ...routine,
+      name: confirmSplitTemplate.name,
+      description: confirmSplitTemplate.description,
+      currentQueueIndex: 0,
+      days: newDays,
+    };
+
+    onSaveRoutine(updatedRoutine);
+    setSelectedDayIdx(0);
+    setConfirmSplitTemplate(null);
+  };
+
   return (
     <div className="flex-1 px-4 py-5 pb-24 space-y-6 overflow-y-auto">
-      {/* Header */}
-      <div>
-        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-          WORKOUT SCHEDULE
-        </span>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
-          Your Workout Routine
-        </h2>
-        <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-          Your routine sequence is continuous. Missed days roll forward automatically so you never lose momentum.
-        </p>
+      {/* Header & Export / Import Action */}
+      <div className="flex items-start justify-between">
+        <div>
+          <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+            WORKOUT SCHEDULE
+          </span>
+          <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
+            Your Routine
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            Your workouts follow a continuous sequence. Missed days roll forward so you never lose momentum.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsImportExportOpen(true)}
+          className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-300 hover:text-white flex items-center space-x-1.5 text-xs font-mono flex-shrink-0"
+          title="Export / Import Routine"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          <span>SHARE / BACKUP</span>
+        </button>
       </div>
 
       {/* Routine Days Sequence Tabs */}
@@ -184,7 +279,7 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
             SEQUENCE ORDER
           </span>
           <button
-            onClick={handleAddDay}
+            onClick={() => setIsAddDayOpen(true)}
             className="text-xs font-mono text-zinc-300 hover:text-white flex items-center space-x-1"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -242,7 +337,7 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
                 <ArrowDown className="w-4 h-4" />
               </button>
               <button
-                onClick={() => handleDeleteDay(selectedDayIdx)}
+                onClick={() => setConfirmDeleteIdx(selectedDayIdx)}
                 className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300"
                 title="Delete this day"
               >
@@ -256,86 +351,12 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
             <div className="flex items-center justify-between text-xs font-mono text-zinc-400 uppercase">
               <span>Exercises ({currentDay.exercises.length})</span>
               <button
-                onClick={() => setShowAddExercise(!showAddExercise)}
-                className="text-zinc-300 hover:text-white flex items-center gap-1"
+                onClick={() => setIsExercisePickerOpen(true)}
+                className="text-zinc-300 hover:text-white flex items-center gap-1 font-semibold"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Exercise
+                <Plus className="w-3.5 h-3.5" /> Select Exercise
               </button>
             </div>
-
-            {/* Add Exercise Inline Form */}
-            {showAddExercise && (
-              <motion.form
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                onSubmit={handleAddExerciseToDay}
-                className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3"
-              >
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-zinc-400">
-                    Exercise Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Bulgarian Split Squat"
-                    value={newExerciseName}
-                    onChange={(e) => setNewExerciseName(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white focus:outline-none focus:border-white font-mono"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-mono uppercase text-zinc-400">
-                      Muscle Group
-                    </label>
-                    <select
-                      value={newExerciseMuscle}
-                      onChange={(e) => setNewExerciseMuscle(e.target.value as MuscleGroup)}
-                      className="w-full mt-1 px-2.5 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white focus:outline-none focus:border-white font-mono"
-                    >
-                      <option value="Chest">Chest</option>
-                      <option value="Back">Back</option>
-                      <option value="Shoulders">Shoulders</option>
-                      <option value="Legs">Legs</option>
-                      <option value="Arms">Arms</option>
-                      <option value="Core">Core</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-mono uppercase text-zinc-400">
-                      Target Sets
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={newExerciseSets}
-                      onChange={(e) => setNewExerciseSets(parseInt(e.target.value) || 3)}
-                      className="w-full mt-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-white focus:outline-none focus:border-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex space-x-2 pt-1">
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 bg-white text-black font-bold font-mono text-xs rounded-lg hover:bg-zinc-200 transition-colors"
-                  >
-                    SAVE EXERCISE
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddExercise(false)}
-                    className="px-3 py-2 bg-zinc-800 text-zinc-400 font-mono text-xs rounded-lg hover:text-white"
-                  >
-                    CANCEL
-                  </button>
-                </div>
-              </motion.form>
-            )}
 
             {/* List of Exercises */}
             <div className="space-y-2">
@@ -350,7 +371,7 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
                         {ex.muscleGroup}
                       </span>
                       <span className="text-xs font-mono text-zinc-400">
-                        {ex.targetSets} sets × {ex.targetRepsMin}–{ex.targetRepsMax} reps
+                        {ex.targetSets} sets · {ex.targetRepsMin}–{ex.targetRepsMax} reps
                       </span>
                     </div>
                     <div className="text-sm font-semibold text-white mt-1">
@@ -367,6 +388,19 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
                   </button>
                 </div>
               ))}
+
+              {currentDay.exercises.length === 0 && (
+                <div className="py-6 text-center rounded-xl bg-zinc-900/30 border border-dashed border-zinc-800 space-y-2">
+                  <Dumbbell className="w-6 h-6 text-zinc-600 mx-auto" />
+                  <p className="text-xs font-mono text-zinc-400">No exercises added to this day yet.</p>
+                  <button
+                    onClick={() => setIsExercisePickerOpen(true)}
+                    className="px-3.5 py-1.5 bg-white text-black font-semibold font-mono text-xs rounded-lg hover:bg-zinc-200"
+                  >
+                    + Pick from Standard Exercises
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -393,19 +427,14 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
                       key={d.name}
                       className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800"
                     >
-                      {d.name}
+                      {d.name} ({d.exercises.length} ex)
                     </span>
                   ))}
                 </div>
               </div>
 
               <button
-                onClick={() => {
-                  if (confirm(`Switch routine to ${tmpl.name}? This will update your active workout sequence.`)) {
-                    // Quick template switch
-                    alert(`Loaded ${tmpl.name} into your active sequence.`);
-                  }
-                }}
+                onClick={() => setConfirmSplitTemplate(tmpl)}
                 className="ml-3 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 hover:text-white hover:border-zinc-600 flex-shrink-0"
               >
                 LOAD SPLIT
@@ -414,6 +443,66 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Add Day Modal (replaces browser prompt) */}
+      <AddDayModal
+        isOpen={isAddDayOpen}
+        onAddDay={handleAddDay}
+        onClose={() => setIsAddDayOpen(false)}
+      />
+
+      {/* Exercise Picker Modal (Pre-loaded standard library) */}
+      <ExercisePickerModal
+        isOpen={isExercisePickerOpen}
+        title="Add Exercise to Routine"
+        subtitle="Search pre-loaded standard gym exercises"
+        onSelectExercise={handleSelectExercise}
+        onClose={() => setIsExercisePickerOpen(false)}
+      />
+
+      {/* Import & Export Modal */}
+      <RoutineImportExportModal
+        isOpen={isImportExportOpen}
+        routine={routine}
+        onImportRoutine={(newRoutine) => {
+          onSaveRoutine(newRoutine);
+          setSelectedDayIdx(0);
+        }}
+        onClose={() => setIsImportExportOpen(false)}
+      />
+
+      {/* Confirm Delete Day Dialog */}
+      <ConfirmDialogModal
+        isOpen={confirmDeleteIdx !== null}
+        title="Delete Workout Day"
+        message={`Are you sure you want to remove "${routine.days[confirmDeleteIdx || 0]?.name}" from your routine sequence?`}
+        confirmLabel="DELETE DAY"
+        isDestructive={true}
+        onConfirm={handleDeleteDayConfirm}
+        onCancel={() => setConfirmDeleteIdx(null)}
+      />
+
+      {/* Confirm Template Switch Dialog */}
+      <ConfirmDialogModal
+        isOpen={confirmSplitTemplate !== null}
+        title={`Switch to ${confirmSplitTemplate?.name}?`}
+        message="This will update your workout routine sequence with the pre-loaded exercises for this split. Your historical workouts and PRs will remain safe."
+        confirmLabel="LOAD THIS SPLIT"
+        onConfirm={handleApplyTemplate}
+        onCancel={() => setConfirmSplitTemplate(null)}
+      />
+
+      {/* Info message notification */}
+      {infoMessage && (
+        <ConfirmDialogModal
+          isOpen={true}
+          title="Notice"
+          message={infoMessage}
+          confirmLabel="OK"
+          onConfirm={() => setInfoMessage(null)}
+          onCancel={() => setInfoMessage(null)}
+        />
+      )}
     </div>
   );
 };

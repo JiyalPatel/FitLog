@@ -159,11 +159,9 @@ export function App() {
 
   // Cancel workout
   const handleCancelWorkout = () => {
-    if (confirm('Discard this workout? Progress from this session will not be saved.')) {
-      dataRepository.saveActiveSession(null);
-      setActiveSession(null);
-      setActiveTab('home');
-    }
+    dataRepository.saveActiveSession(null);
+    setActiveSession(null);
+    setActiveTab('home');
   };
 
   // If user hasn't chosen a mode yet, show Welcome / Login screen

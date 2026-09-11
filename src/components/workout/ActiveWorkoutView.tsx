@@ -1,23 +1,26 @@
 // src/components/workout/ActiveWorkoutView.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Check, 
   Plus, 
   Trash2, 
   Clock, 
-  RotateCcw, 
-  Flame, 
   Award, 
   ChevronDown, 
   ChevronUp, 
   Volume2, 
-  VolumeX,
-  X
+  VolumeX, 
+  X,
+  Repeat,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WorkoutSession, WorkoutExerciseLog, WorkoutSet, PersonalRecord } from '../../types';
 import { evaluateSetForPR } from '../../services/engine/prEngine';
 import { soundEffects } from '../../services/audio/soundEffects';
+import { ExercisePickerModal } from '../common/ExercisePickerModal';
+import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
+import { StandardExercise } from '../../services/data/standardExercises';
 
 interface ActiveWorkoutViewProps {
   session: WorkoutSession;
@@ -52,6 +55,18 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
 
   // Expanded notes per exercise
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+
+  // Swap exercise state
+  const [swapExerciseIdx, setSwapExerciseIdx] = useState<number | null>(null);
+
+  // Add bonus exercise for today
+  const [isAddExerciseForTodayOpen, setIsAddExerciseForTodayOpen] = useState<boolean>(false);
+
+  // Discard workout confirm modal
+  const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState<boolean>(false);
+
+  // Toast feedback message
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Elapsed workout timer effect
   useEffect(() => {
@@ -134,10 +149,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
           details: `${targetSet.weight} kg × ${targetSet.reps} reps`,
         });
 
-        // Auto dismiss alert after 4 seconds
         setTimeout(() => setNewPRAlert(null), 4000);
 
-        // Add to session's prsAchieved if not present
         const currentPrs = session.prsAchieved || [];
         if (!currentPrs.some((p) => p.id === detectedPR.id)) {
           session.prsAchieved = [...currentPrs, detectedPR];
@@ -185,7 +198,6 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
     const targetSet = { ...updatedExercises[exerciseIdx].sets[setIdx], [field]: Math.max(0, value) };
     updatedExercises[exerciseIdx].sets[setIdx] = targetSet;
 
-    // Recalculate volume
     let totalVol = 0;
     updatedExercises.forEach((ex) => {
       ex.sets.forEach((s) => {
@@ -224,12 +236,71 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
     if (updatedExercises[exerciseIdx].sets.length <= 1) return;
 
     updatedExercises[exerciseIdx].sets.splice(setIdx, 1);
-    // Renumber sets
     updatedExercises[exerciseIdx].sets.forEach((s, idx) => {
       s.setNumber = idx + 1;
     });
 
     onUpdateSession({ ...session, exercises: updatedExercises });
+  };
+
+  // Swap Exercise for Today
+  const handleSwapExerciseSelect = (newEx: StandardExercise) => {
+    if (swapExerciseIdx === null) return;
+
+    const updatedExercises = [...session.exercises];
+    const oldName = updatedExercises[swapExerciseIdx].exerciseName;
+
+    updatedExercises[swapExerciseIdx] = {
+      ...updatedExercises[swapExerciseIdx],
+      exerciseName: newEx.name,
+      muscleGroup: newEx.muscleGroup,
+    };
+
+    onUpdateSession({ ...session, exercises: updatedExercises });
+    setToastMessage(`Swapped ${oldName} → ${newEx.name} for today!`);
+    setTimeout(() => setToastMessage(null), 3500);
+    setSwapExerciseIdx(null);
+  };
+
+  // Add Bonus Exercise for Today
+  const handleAddExerciseToToday = (exercise: StandardExercise) => {
+    const sets: WorkoutSet[] = [];
+    for (let i = 1; i <= exercise.defaultSets; i++) {
+      sets.push({
+        id: `s-${Date.now()}-${i}`,
+        setNumber: i,
+        weight: 20,
+        reps: exercise.defaultRepsMin,
+        isCompleted: false,
+      });
+    }
+
+    const newLog: WorkoutExerciseLog = {
+      id: `log-${Date.now()}`,
+      exerciseName: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      sets,
+    };
+
+    onUpdateSession({ ...session, exercises: [...session.exercises, newLog] });
+    setIsAddExerciseForTodayOpen(false);
+    setToastMessage(`Added ${exercise.name} to today's workout!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Remove Exercise from Today's Session
+  const handleRemoveExerciseFromToday = (exerciseIdx: number) => {
+    if (session.exercises.length <= 1) {
+      setToastMessage('Workout session must have at least 1 exercise.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const removedName = session.exercises[exerciseIdx].exerciseName;
+    const updatedExercises = session.exercises.filter((_, i) => i !== exerciseIdx);
+    onUpdateSession({ ...session, exercises: updatedExercises });
+    setToastMessage(`Removed ${removedName} from today's workout.`);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   return (
@@ -273,7 +344,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
         </div>
       </div>
 
-      {/* Floating Rest Timer (Appears when active) */}
+      {/* Floating Rest Timer */}
       <AnimatePresence>
         {restTimerSeconds !== null && (
           <motion.div
@@ -339,6 +410,23 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
         )}
       </AnimatePresence>
 
+      {/* Floating Toast Message */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            className="mx-4 mt-2 p-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs font-mono text-white flex items-center justify-between shadow-lg"
+          >
+            <span>{toastMessage}</span>
+            <button onClick={() => setToastMessage(null)} className="p-1 text-zinc-400 hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* New PR Celebratory Notification */}
       <AnimatePresence>
         {newPRAlert && (
@@ -374,7 +462,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
               key={exercise.id}
               className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3 shadow-lg"
             >
-              {/* Exercise Header */}
+              {/* Exercise Header with Swap & Remove for Today */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center space-x-2">
@@ -392,14 +480,37 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
                   </h3>
                 </div>
 
-                <button
-                  onClick={() =>
-                    setExpandedNotes({ ...expandedNotes, [exercise.id]: !isNoteOpen })
-                  }
-                  className="text-xs text-zinc-400 hover:text-white p-1"
-                >
-                  {isNoteOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
+                <div className="flex items-center space-x-1">
+                  {/* Swap Exercise for Today Button */}
+                  <button
+                    onClick={() => setSwapExerciseIdx(exerciseIdx)}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-[11px] font-mono text-zinc-300 hover:text-white flex items-center space-x-1 transition-colors"
+                    title="Swap this exercise just for today"
+                  >
+                    <Repeat className="w-3 h-3" />
+                    <span>Swap</span>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      setExpandedNotes({ ...expandedNotes, [exercise.id]: !isNoteOpen })
+                    }
+                    className="text-xs text-zinc-400 hover:text-white p-1"
+                    title="Exercise notes"
+                  >
+                    {isNoteOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {session.exercises.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveExerciseFromToday(exerciseIdx)}
+                      className="p-1 text-zinc-600 hover:text-zinc-400"
+                      title="Skip this exercise today"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Previous Performance Memory Chip */}
@@ -549,17 +660,61 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
             </div>
           );
         })}
+
+        {/* Add Exercise for Today Button */}
+        <button
+          onClick={() => setIsAddExerciseForTodayOpen(true)}
+          className="w-full py-3.5 rounded-2xl border border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:bg-zinc-900 text-xs font-mono text-zinc-300 hover:text-white flex items-center justify-center space-x-2 transition-all shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>ADD EXERCISE FOR TODAY</span>
+        </button>
       </div>
 
       {/* Cancel Workout Action */}
       <div className="p-4 text-center">
         <button
-          onClick={onCancelWorkout}
+          onClick={() => setIsDiscardConfirmOpen(true)}
           className="text-xs font-mono text-zinc-600 hover:text-zinc-400 tracking-wider uppercase"
         >
           Discard Workout Session
         </button>
       </div>
+
+      {/* Swap Exercise Modal (Just for Today) */}
+      {swapExerciseIdx !== null && (
+        <ExercisePickerModal
+          isOpen={true}
+          title={`Swap "${session.exercises[swapExerciseIdx]?.exerciseName}" for Today`}
+          subtitle="Replaces this movement for today's session only"
+          initialMuscleGroup={session.exercises[swapExerciseIdx]?.muscleGroup}
+          onSelectExercise={handleSwapExerciseSelect}
+          onClose={() => setSwapExerciseIdx(null)}
+        />
+      )}
+
+      {/* Add Exercise to Today Modal */}
+      <ExercisePickerModal
+        isOpen={isAddExerciseForTodayOpen}
+        title="Add Exercise to Today's Workout"
+        subtitle="Add a movement for this session"
+        onSelectExercise={handleAddExerciseToToday}
+        onClose={() => setIsAddExerciseForTodayOpen(false)}
+      />
+
+      {/* Discard Workout Confirm Modal */}
+      <ConfirmDialogModal
+        isOpen={isDiscardConfirmOpen}
+        title="Discard Workout Session?"
+        message="Are you sure you want to discard this workout? Any sets logged in this session will not be saved."
+        confirmLabel="DISCARD WORKOUT"
+        isDestructive={true}
+        onConfirm={() => {
+          setIsDiscardConfirmOpen(false);
+          onCancelWorkout();
+        }}
+        onCancel={() => setIsDiscardConfirmOpen(false)}
+      />
     </div>
   );
 };

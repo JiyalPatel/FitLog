@@ -10,15 +10,18 @@ import { RoutineManagerView } from './components/routine/RoutineManagerView';
 import { ProgressView } from './components/analytics/ProgressView';
 import { ProfileView } from './components/profile/ProfileView';
 import { AuthModal } from './components/auth/AuthModal';
+import { WelcomeScreen } from './components/auth/WelcomeScreen';
 
 import { Routine, WorkoutSession, PersonalRecord, UserProfile } from './types';
 import { dataRepository } from './services/storage/dataRepository';
+import { localStore } from './services/storage/localStorageStore';
 import { calculateWorkoutStreak } from './services/engine/rollingQueue';
 import { calculateWeeklyStats } from './services/engine/scoringEngine';
 import { generateOverloadTips } from './services/engine/overloadEngine';
 import { defaultRoutine, initialGuestProfile } from './services/storage/mockInitialData';
 
 export function App() {
+  const [isOnboardingDone, setIsOnboardingDone] = useState<boolean>(() => localStore.isOnboardingCompleted());
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [profile, setProfile] = useState<UserProfile>(initialGuestProfile);
   const [routine, setRoutine] = useState<Routine>(defaultRoutine);
@@ -163,6 +166,23 @@ export function App() {
     }
   };
 
+  // If user hasn't chosen a mode yet, show Welcome / Login screen
+  if (!isOnboardingDone) {
+    return (
+      <WelcomeScreen
+        onContinueAsGuest={() => {
+          localStore.setOnboardingCompleted(true);
+          setIsOnboardingDone(true);
+        }}
+        onAuthSuccess={() => {
+          localStore.setOnboardingCompleted(true);
+          setIsOnboardingDone(true);
+          loadData();
+        }}
+      />
+    );
+  }
+
   return (
     <AppLayout>
       {/* Header */}
@@ -267,6 +287,11 @@ export function App() {
             onOpenAuth={() => {
               setIsProfileOpen(false);
               setIsAuthOpen(true);
+            }}
+            onSignOut={() => {
+              localStore.setOnboardingCompleted(false);
+              setIsOnboardingDone(false);
+              setIsProfileOpen(false);
             }}
           />
         </div>

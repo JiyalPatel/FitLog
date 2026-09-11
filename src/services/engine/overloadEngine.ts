@@ -10,25 +10,7 @@ export function generateOverloadTips(sessions: WorkoutSession[]): ProgressiveOve
   const completed = sessions.filter((s) => s.status === 'completed');
 
   if (completed.length === 0) {
-    // Default helpful starter tip
-    return [
-      {
-        id: 'tip-starter',
-        exerciseName: 'Pec Dec Fly',
-        currentPerformance: '15 kg × 15 reps (3 sets)',
-        suggestion: 'You are consistently reaching the top of your rep range. Consider trying 17.5 kg next session.',
-        reason: 'Consistently hitting 15 reps across all sets',
-        type: 'increase_weight',
-      },
-      {
-        id: 'tip-bench',
-        exerciseName: 'Bench Press',
-        currentPerformance: '60 kg × 10 reps',
-        suggestion: 'Try aiming for 11–12 reps with 60 kg before jumping to 62.5 kg.',
-        reason: 'Building rep volume towards progressive overload',
-        type: 'increase_reps',
-      },
-    ];
+    return [];
   }
 
   // Aggregate exercise performance across sessions
@@ -72,18 +54,6 @@ export function generateOverloadTips(sessions: WorkoutSession[]): ProgressiveOve
       }
     }
   });
-
-  // If no automatic triggers found yet, supply good defaults
-  if (tips.length === 0) {
-    tips.push({
-      id: 'tip-default',
-      exerciseName: 'Pec Dec Fly',
-      currentPerformance: '15 kg × 15 reps',
-      suggestion: 'You are consistently reaching the top of your rep range. Try 17.5 kg next session.',
-      reason: 'Rep target accomplished',
-      type: 'increase_weight',
-    });
-  }
 
   return tips.slice(0, 3);
 }

@@ -21,22 +21,25 @@ interface ProfileViewProps {
   profile: UserProfile;
   onUpdateProfile: (profile: UserProfile) => void;
   onOpenAuth: () => void;
+  onSignOut?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   profile,
   onUpdateProfile,
   onOpenAuth,
+  onSignOut,
 }) => {
   const handleSignOut = async () => {
     if (supabase) {
       await supabase.auth.signOut();
     }
+    onSignOut?.();
   };
 
   const handleResetData = () => {
-    if (confirm('Reset local workout data to defaults? This will erase any local custom workouts.')) {
-      localStore.clearGuestData();
+    if (confirm('Reset your workout data? This will give you a clean slate.')) {
+      localStore.clearAllData();
       window.location.reload();
     }
   };

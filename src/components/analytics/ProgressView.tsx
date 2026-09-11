@@ -65,18 +65,6 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
     }
   });
 
-  // Fallback demo points if only 1 point exists
-  if (exerciseChartData.length === 1) {
-    exerciseChartData.unshift({
-      date: 'Aug 24',
-      value: Math.round(exerciseChartData[0].value * 0.88),
-    });
-    exerciseChartData.unshift({
-      date: 'Aug 17',
-      value: Math.round(exerciseChartData[0].value * 0.82),
-    });
-  }
-
   // Volume Bar Chart Data (Weekly or per session)
   const volumeChartData = completed.slice(-5).map((s) => ({
     name: s.name,
@@ -299,37 +287,47 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
         </div>
 
         <div className="space-y-2 pt-1">
-          {prs.map((pr) => (
-            <div
-              key={pr.id}
-              className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-850 flex items-center justify-between"
-            >
-              <div>
-                <div className="text-sm font-semibold text-white">{pr.exerciseName}</div>
-                <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
-                  Achieved{' '}
-                  {new Date(pr.achievedAt).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-sm font-bold font-mono text-white">
-                  {pr.prType === 'weight'
-                    ? `${pr.weight} kg × ${pr.reps}`
-                    : pr.prType === '1rm'
-                    ? `~${pr.prValue} kg 1RM`
-                    : `${pr.prValue} kg`}
-                </div>
-                <span className="text-[10px] font-mono text-zinc-400 uppercase">
-                  {pr.prType} record
-                </span>
-              </div>
+          {prs.length === 0 ? (
+            <div className="py-6 px-4 text-center rounded-xl bg-zinc-900/30 border border-zinc-900">
+              <Award className="w-6 h-6 text-zinc-600 mx-auto mb-2" />
+              <div className="text-xs font-semibold text-zinc-400">No Personal Records Yet</div>
+              <p className="text-[11px] font-mono text-zinc-600 mt-1 max-w-xs mx-auto">
+                Log your sets during workouts. When you lift a heavier weight or more reps, your personal records will appear here!
+              </p>
             </div>
-          ))}
+          ) : (
+            prs.map((pr) => (
+              <div
+                key={pr.id}
+                className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-850 flex items-center justify-between"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-white">{pr.exerciseName}</div>
+                  <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
+                    Achieved{' '}
+                    {new Date(pr.achievedAt).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-sm font-bold font-mono text-white">
+                    {pr.prType === 'weight'
+                      ? `${pr.weight} kg × ${pr.reps}`
+                      : pr.prType === '1rm'
+                      ? `~${pr.prValue} kg 1RM`
+                      : `${pr.prValue} kg`}
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase">
+                    {pr.prType} record
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

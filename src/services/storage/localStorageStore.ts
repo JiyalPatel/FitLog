@@ -3,14 +3,31 @@ import { Routine, WorkoutSession, PersonalRecord, UserProfile } from '../../type
 import { defaultRoutine, initialHistoricalSessions, initialPRs, initialGuestProfile } from './mockInitialData';
 
 const STORAGE_KEYS = {
-  PROFILE: 'fit_noir_profile',
-  ROUTINE: 'fit_noir_routine',
-  SESSIONS: 'fit_noir_sessions',
-  PRS: 'fit_noir_prs',
-  ACTIVE_SESSION: 'fit_noir_active_session',
+  PROFILE: 'fitlog_profile',
+  ROUTINE: 'fitlog_routine',
+  SESSIONS: 'fitlog_sessions',
+  PRS: 'fitlog_prs',
+  ACTIVE_SESSION: 'fitlog_active_session',
+  ONBOARDING_COMPLETED: 'fitlog_onboarding_completed',
 };
 
 export class LocalStorageStore {
+  isOnboardingCompleted(): boolean {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  setOnboardingCompleted(completed: boolean): void {
+    if (completed) {
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    }
+  }
+
   getProfile(): UserProfile {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PROFILE);
@@ -101,7 +118,7 @@ export class LocalStorageStore {
     }
   }
 
-  clearGuestData(): void {
+  clearAllData(): void {
     Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
   }
 }

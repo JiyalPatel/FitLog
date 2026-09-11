@@ -14,17 +14,17 @@ export const initialGuestProfile: UserProfile = {
 export const defaultRoutine: Routine = {
   id: 'routine-ppl',
   name: 'Push Pull Legs (PPL)',
-  description: 'Classic 6-day sequential bodybuilding split designed for progressive overload and recovery.',
+  description: 'Classic sequential bodybuilding split designed for progressive overload and recovery.',
   currentQueueIndex: 0,
   targetDaysPerWeek: 5,
-  createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  lastCompletedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  createdAt: new Date().toISOString(),
+  lastCompletedDate: undefined,
   days: [
     {
       id: 'day-push',
       name: 'Push',
       dayOrder: 0,
-      estimatedMinutes: 55,
+      estimatedMinutes: 50,
       exercises: [
         {
           id: 'ex-bench',
@@ -92,7 +92,7 @@ export const defaultRoutine: Routine = {
       id: 'day-pull',
       name: 'Pull',
       dayOrder: 1,
-      estimatedMinutes: 55,
+      estimatedMinutes: 50,
       exercises: [
         {
           id: 'ex-lat-pulldown',
@@ -160,7 +160,7 @@ export const defaultRoutine: Routine = {
       id: 'day-legs',
       name: 'Legs',
       dayOrder: 2,
-      estimatedMinutes: 60,
+      estimatedMinutes: 55,
       exercises: [
         {
           id: 'ex-squat',
@@ -217,212 +217,8 @@ export const defaultRoutine: Routine = {
   ],
 };
 
-export const initialHistoricalSessions: WorkoutSession[] = [
-  {
-    id: 'session-prev-1',
-    routineId: 'routine-ppl',
-    routineDayId: 'day-push',
-    name: 'Push',
-    startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 3600000).toISOString(),
-    completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    durationSeconds: 3480, // 58 min
-    totalVolume: 4820,
-    totalSets: 18,
-    workoutScore: 87,
-    status: 'completed',
-    notes: 'Great mind-muscle connection on Pec Dec fly.',
-    prsAchieved: [
-      {
-        id: 'pr-pec-1',
-        exerciseName: 'Pec Dec Fly',
-        prType: 'weight',
-        prValue: 20,
-        weight: 20,
-        reps: 12,
-        achievedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-    exercises: [
-      {
-        id: 'log-bench',
-        exerciseName: 'Barbell Bench Press',
-        muscleGroup: 'Chest',
-        sets: [
-          { id: 's-b-1', setNumber: 1, weight: 70, reps: 10, isCompleted: true },
-          { id: 's-b-2', setNumber: 2, weight: 75, reps: 8, isCompleted: true },
-          { id: 's-b-3', setNumber: 3, weight: 80, reps: 6, isCompleted: true },
-        ],
-      },
-      {
-        id: 'log-incline',
-        exerciseName: 'Incline Dumbbell Press',
-        muscleGroup: 'Chest',
-        sets: [
-          { id: 's-i-1', setNumber: 1, weight: 26, reps: 10, isCompleted: true },
-          { id: 's-i-2', setNumber: 2, weight: 26, reps: 10, isCompleted: true },
-          { id: 's-i-3', setNumber: 3, weight: 28, reps: 8, isCompleted: true },
-        ],
-      },
-      {
-        id: 'log-pec',
-        exerciseName: 'Pec Dec Fly',
-        muscleGroup: 'Chest',
-        sets: [
-          { id: 's-p-1', setNumber: 1, weight: 15, reps: 15, isCompleted: true },
-          { id: 's-p-2', setNumber: 2, weight: 15, reps: 14, isCompleted: true },
-          { id: 's-p-3', setNumber: 3, weight: 17.5, reps: 12, isCompleted: true },
-        ],
-      },
-      {
-        id: 'log-ohp',
-        exerciseName: 'Dumbbell Shoulder Press',
-        muscleGroup: 'Shoulders',
-        sets: [
-          { id: 's-o-1', setNumber: 1, weight: 20, reps: 10, isCompleted: true },
-          { id: 's-o-2', setNumber: 2, weight: 20, reps: 10, isCompleted: true },
-          { id: 's-o-3', setNumber: 3, weight: 22, reps: 8, isCompleted: true },
-        ],
-      },
-      {
-        id: 'log-lat',
-        exerciseName: 'Lateral Raise',
-        muscleGroup: 'Shoulders',
-        sets: [
-          { id: 's-l-1', setNumber: 1, weight: 10, reps: 15, isCompleted: true },
-          { id: 's-l-2', setNumber: 2, weight: 10, reps: 15, isCompleted: true },
-          { id: 's-l-3', setNumber: 3, weight: 12, reps: 12, isCompleted: true },
-        ],
-      },
-      {
-        id: 'log-tri',
-        exerciseName: 'Triceps Pushdown',
-        muscleGroup: 'Arms',
-        sets: [
-          { id: 's-t-1', setNumber: 1, weight: 25, reps: 15, isCompleted: true },
-          { id: 's-t-2', setNumber: 2, weight: 27.5, reps: 12, isCompleted: true },
-          { id: 's-t-3', setNumber: 3, weight: 30, reps: 10, isCompleted: true },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'session-prev-2',
-    routineId: 'routine-ppl',
-    routineDayId: 'day-pull',
-    name: 'Pull',
-    startedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 3600000).toISOString(),
-    completedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    durationSeconds: 3200,
-    totalVolume: 5120,
-    totalSets: 18,
-    workoutScore: 84,
-    status: 'completed',
-    notes: 'Solid pulling session.',
-    prsAchieved: [],
-    exercises: [
-      {
-        id: 'log-lat-pull',
-        exerciseName: 'Lat Pulldown',
-        muscleGroup: 'Back',
-        sets: [
-          { id: 's-lp-1', setNumber: 1, weight: 55, reps: 12, isCompleted: true },
-          { id: 's-lp-2', setNumber: 2, weight: 60, reps: 10, isCompleted: true },
-          { id: 's-lp-3', setNumber: 3, weight: 65, reps: 8, isCompleted: true },
-        ],
-      },
-      {
-        id: 'log-row',
-        exerciseName: 'Barbell Bent Over Row',
-        muscleGroup: 'Back',
-        sets: [
-          { id: 's-br-1', setNumber: 1, weight: 60, reps: 10, isCompleted: true },
-          { id: 's-br-2', setNumber: 2, weight: 65, reps: 8, isCompleted: true },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'session-prev-3',
-    routineId: 'routine-ppl',
-    routineDayId: 'day-legs',
-    name: 'Legs',
-    startedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000 - 3600000).toISOString(),
-    completedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    durationSeconds: 3600,
-    totalVolume: 6200,
-    totalSets: 17,
-    workoutScore: 90,
-    status: 'completed',
-    prsAchieved: [
-      {
-        id: 'pr-squat-1',
-        exerciseName: 'Barbell Back Squat',
-        prType: 'weight',
-        prValue: 100,
-        weight: 100,
-        reps: 6,
-        achievedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-    exercises: [
-      {
-        id: 'log-sq',
-        exerciseName: 'Barbell Back Squat',
-        muscleGroup: 'Legs',
-        sets: [
-          { id: 's-sq-1', setNumber: 1, weight: 80, reps: 10, isCompleted: true },
-          { id: 's-sq-2', setNumber: 2, weight: 90, reps: 8, isCompleted: true },
-          { id: 's-sq-3', setNumber: 3, weight: 100, reps: 6, isCompleted: true, isPR: true },
-        ],
-      },
-    ],
-  },
-];
+// No sample workout history - clean blank slate for user
+export const initialHistoricalSessions: WorkoutSession[] = [];
 
-export const initialPRs: PersonalRecord[] = [
-  {
-    id: 'pr-pec-fly-1',
-    exerciseName: 'Pec Dec Fly',
-    prType: 'weight',
-    prValue: 20,
-    weight: 20,
-    reps: 12,
-    achievedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'pr-pec-fly-1rm',
-    exerciseName: 'Pec Dec Fly',
-    prType: '1rm',
-    prValue: 28,
-    weight: 20,
-    reps: 12,
-    achievedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'pr-bench-1',
-    exerciseName: 'Barbell Bench Press',
-    prType: 'weight',
-    prValue: 80,
-    weight: 80,
-    reps: 6,
-    achievedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'pr-squat-1',
-    exerciseName: 'Barbell Back Squat',
-    prType: 'weight',
-    prValue: 100,
-    weight: 100,
-    reps: 6,
-    achievedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'pr-lat-1',
-    exerciseName: 'Lat Pulldown',
-    prType: 'weight',
-    prValue: 65,
-    weight: 65,
-    reps: 8,
-    achievedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+// No sample personal records - clean blank slate for user
+export const initialPRs: PersonalRecord[] = [];

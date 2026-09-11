@@ -145,11 +145,7 @@ export function calculateWeeklyStats(
     volumeChangePercent,
     prsCount,
     averageWorkoutScore: avgScore,
-    bestImprovement: {
-      exerciseName: 'Pec Dec Fly',
-      previous: '15 kg × 15',
-      current: '17.5 kg × 14',
-    },
+    bestImprovement: undefined,
   };
 }
 

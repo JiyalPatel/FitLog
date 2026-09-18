@@ -13,7 +13,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { UserProfile } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { dataRepository } from '../../services/storage/dataRepository';
 import { localStore } from '../../services/storage/localStorageStore';
 import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
 
@@ -31,11 +31,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSignOut,
 }) => {
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+  const currentUser = dataRepository.getCurrentUser();
 
   const handleSignOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+    await dataRepository.signOut();
     onSignOut?.();
   };
 
@@ -59,9 +58,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Account Status Card */}
       <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-4 shadow-xl">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-mono font-bold text-white text-lg">
-            {profile.isGuest ? 'A' : profile.displayName.charAt(0).toUpperCase()}
-          </div>
+          {currentUser?.photoURL ? (
+            <img
+              src={currentUser.photoURL}
+              alt={profile.displayName}
+              className="w-12 h-12 rounded-full object-cover border border-zinc-700"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-mono font-bold text-white text-lg">
+              {profile.isGuest ? 'A' : profile.displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
             <div className="flex items-center space-x-2">
               <h3 className="text-base font-bold text-white">{profile.displayName}</h3>

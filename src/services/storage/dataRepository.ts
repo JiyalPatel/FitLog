@@ -1,27 +1,22 @@
 // src/services/storage/dataRepository.ts
 import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from '../../types';
 import { localStore } from './localStorageStore';
-import { supabaseStore } from './supabaseStore';
-import { supabase } from '../../lib/supabase';
+import { firebaseStore } from './firebaseStore';
+import { auth, googleProvider, isFirebaseConfigured } from '../../lib/firebase';
+import { onAuthStateChanged, signInWithPopup, signOut as fbSignOut, User as FirebaseUser } from 'firebase/auth';
 
 type Listener = () => void;
 
 class DataRepository {
   private currentUserId: string | null = null;
+  private currentUser: FirebaseUser | null = null;
   private listeners: Set<Listener> = new Set();
 
   constructor() {
-    // Check if user session exists in Supabase
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          this.currentUserId = session.user.id;
-          this.notify();
-        }
-      });
-
-      supabase.auth.onAuthStateChange((_event, session) => {
-        this.currentUserId = session?.user ? session.user.id : null;
+    if (auth) {
+      onAuthStateChanged(auth, (user) => {
+        this.currentUserId = user ? user.uid : null;
+        this.currentUser = user;
         this.notify();
       });
     }
@@ -33,6 +28,30 @@ class DataRepository {
 
   getUserId(): string | null {
     return this.currentUserId;
+  }
+
+  getCurrentUser(): FirebaseUser | null {
+    return this.currentUser;
+  }
+
+  async signInWithGoogle(): Promise<FirebaseUser | null> {
+    if (!auth || !isFirebaseConfigured) {
+      throw new Error('Firebase is not configured. Please add your Firebase keys in .env.');
+    }
+    const result = await signInWithPopup(auth, googleProvider);
+    this.currentUserId = result.user.uid;
+    this.currentUser = result.user;
+    this.notify();
+    return result.user;
+  }
+
+  async signOut(): Promise<void> {
+    if (auth) {
+      await fbSignOut(auth);
+    }
+    this.currentUserId = null;
+    this.currentUser = null;
+    this.notify();
   }
 
   subscribe(listener: Listener): () => void {
@@ -52,15 +71,31 @@ class DataRepository {
 
   async getProfile(): Promise<UserProfile> {
     if (this.currentUserId) {
-      const profile = await supabaseStore.getProfile(this.currentUserId);
+      const profile = await firebaseStore.getProfile(this.currentUserId);
       if (profile) return profile;
+
+      // If newly signed in with Google and no profile document yet, create one from Google user
+      if (this.currentUser) {
+        const newProfile: UserProfile = {
+          id: this.currentUser.uid,
+          email: this.currentUser.email || undefined,
+          displayName: this.currentUser.displayName || 'Athlete',
+          isGuest: false,
+          weightUnit: localStore.getProfile().weightUnit || 'kg',
+          restTimerDefaultSeconds: localStore.getProfile().restTimerDefaultSeconds || 90,
+          soundEnabled: true,
+          createdAt: new Date().toISOString(),
+        };
+        await firebaseStore.saveProfile(newProfile);
+        return newProfile;
+      }
     }
     return localStore.getProfile();
   }
 
   async saveProfile(profile: UserProfile): Promise<void> {
     if (this.currentUserId) {
-      await supabaseStore.saveProfile(profile);
+      await firebaseStore.saveProfile(profile);
     }
     localStore.saveProfile(profile);
     this.notify();
@@ -68,7 +103,7 @@ class DataRepository {
 
   async getRoutine(): Promise<Routine> {
     if (this.currentUserId) {
-      const cloudRoutine = await supabaseStore.getActiveRoutine(this.currentUserId);
+      const cloudRoutine = await firebaseStore.getActiveRoutine(this.currentUserId);
       if (cloudRoutine) return cloudRoutine;
     }
     return localStore.getRoutine();
@@ -76,7 +111,7 @@ class DataRepository {
 
   async saveRoutine(routine: Routine): Promise<void> {
     if (this.currentUserId) {
-      await supabaseStore.saveRoutine(this.currentUserId, routine);
+      await firebaseStore.saveRoutine(this.currentUserId, routine);
     }
     localStore.saveRoutine(routine);
     this.notify();
@@ -84,7 +119,7 @@ class DataRepository {
 
   async getSessions(): Promise<WorkoutSession[]> {
     if (this.currentUserId) {
-      const cloudSessions = await supabaseStore.getSessions(this.currentUserId);
+      const cloudSessions = await firebaseStore.getSessions(this.currentUserId);
       if (cloudSessions.length > 0) return cloudSessions;
     }
     return localStore.getSessions();
@@ -92,20 +127,23 @@ class DataRepository {
 
   async saveSession(session: WorkoutSession): Promise<void> {
     if (this.currentUserId) {
-      await supabaseStore.saveSession(this.currentUserId, session);
+      await firebaseStore.saveSession(this.currentUserId, session);
     }
     localStore.saveSession(session);
     this.notify();
   }
 
   async deleteSession(sessionId: string): Promise<void> {
+    if (this.currentUserId) {
+      await firebaseStore.deleteSession(this.currentUserId, sessionId);
+    }
     localStore.deleteSession(sessionId);
     this.notify();
   }
 
   async getPRs(): Promise<PersonalRecord[]> {
     if (this.currentUserId) {
-      const cloudPRs = await supabaseStore.getPRs(this.currentUserId);
+      const cloudPRs = await firebaseStore.getPRs(this.currentUserId);
       if (cloudPRs.length > 0) return cloudPRs;
     }
     return localStore.getPRs();
@@ -113,7 +151,7 @@ class DataRepository {
 
   async savePR(pr: PersonalRecord): Promise<void> {
     if (this.currentUserId) {
-      await supabaseStore.savePR(this.currentUserId, pr);
+      await firebaseStore.savePR(this.currentUserId, pr);
     }
     localStore.savePR(pr);
     this.notify();
@@ -130,7 +168,7 @@ class DataRepository {
 
   async getWeightEntries(): Promise<WeightEntry[]> {
     if (this.currentUserId) {
-      const cloudEntries = await supabaseStore.getWeightEntries(this.currentUserId);
+      const cloudEntries = await firebaseStore.getWeightEntries(this.currentUserId);
       if (cloudEntries.length > 0) return cloudEntries;
     }
     return localStore.getWeightEntries();
@@ -138,7 +176,7 @@ class DataRepository {
 
   async saveWeightEntry(entry: WeightEntry): Promise<void> {
     if (this.currentUserId) {
-      await supabaseStore.saveWeightEntry(this.currentUserId, entry);
+      await firebaseStore.saveWeightEntry(this.currentUserId, entry);
     }
     localStore.saveWeightEntry(entry);
     this.notify();
@@ -146,7 +184,7 @@ class DataRepository {
 
   async deleteWeightEntry(entryId: string): Promise<void> {
     if (this.currentUserId) {
-      await supabaseStore.deleteWeightEntry(this.currentUserId, entryId);
+      await firebaseStore.deleteWeightEntry(this.currentUserId, entryId);
     }
     localStore.deleteWeightEntry(entryId);
     this.notify();

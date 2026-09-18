@@ -64,18 +64,6 @@ export function App() {
     setActiveSession(currentActive);
   }, []);
 
-  useEffect(() => {
-    // Check if returning from Supabase email confirmation or auth redirect
-    if (window.location.hash.includes('access_token')) {
-      localStore.setOnboardingCompleted(true);
-      setIsOnboardingDone(true);
-      setTimeout(() => {
-        if (window.location.hash.includes('access_token')) {
-          window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        }
-      }, 500);
-    }
-  }, []);
 
   useEffect(() => {
     loadData();
@@ -396,7 +384,7 @@ export function App() {
         </div>
       )}
 
-      {/* Supabase Auth Modal */}
+      {/* Cloud Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}

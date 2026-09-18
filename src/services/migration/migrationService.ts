@@ -1,6 +1,6 @@
 // src/services/migration/migrationService.ts
 import { localStore } from '../storage/localStorageStore';
-import { supabaseStore } from '../storage/supabaseStore';
+import { firebaseStore } from '../storage/firebaseStore';
 import { dataRepository } from '../storage/dataRepository';
 
 export interface MigrationResult {
@@ -8,6 +8,7 @@ export interface MigrationResult {
   routinesMigrated: number;
   sessionsMigrated: number;
   prsMigrated: number;
+  weightsMigrated: number;
   error?: string;
 }
 
@@ -22,10 +23,11 @@ export async function migrateGuestDataToCloud(
     const localRoutine = localStore.getRoutine();
     const localSessions = localStore.getSessions();
     const localPRs = localStore.getPRs();
+    const localWeights = localStore.getWeightEntries();
 
     // 1. Save Profile
     onProgress?.('Syncing athlete profile...');
-    await supabaseStore.saveProfile({
+    await firebaseStore.saveProfile({
       ...localProfile,
       id: userId,
       email: userEmail,
@@ -34,21 +36,33 @@ export async function migrateGuestDataToCloud(
 
     // 2. Save Routine
     onProgress?.('Syncing workout routine sequence...');
-    await supabaseStore.saveRoutine(userId, localRoutine);
+    await firebaseStore.saveRoutine(userId, localRoutine);
 
     // 3. Save Workout Sessions
-    onProgress?.(`Transferring ${localSessions.length} recorded workouts...`);
-    for (const session of localSessions) {
-      await supabaseStore.saveSession(userId, session);
+    if (localSessions.length > 0) {
+      onProgress?.(`Transferring ${localSessions.length} recorded workouts...`);
+      for (const session of localSessions) {
+        await firebaseStore.saveSession(userId, session);
+      }
     }
 
     // 4. Save PRs
-    onProgress?.(`Transferring ${localPRs.length} personal records...`);
-    for (const pr of localPRs) {
-      await supabaseStore.savePR(userId, pr);
+    if (localPRs.length > 0) {
+      onProgress?.(`Transferring ${localPRs.length} personal records...`);
+      for (const pr of localPRs) {
+        await firebaseStore.savePR(userId, pr);
+      }
     }
 
-    onProgress?.('Migration complete!');
+    // 5. Save Weight Entries
+    if (localWeights.length > 0) {
+      onProgress?.(`Transferring ${localWeights.length} weight check-ins...`);
+      for (const w of localWeights) {
+        await firebaseStore.saveWeightEntry(userId, w);
+      }
+    }
+
+    onProgress?.('Cloud backup complete!');
     dataRepository.notify();
 
     return {
@@ -56,6 +70,7 @@ export async function migrateGuestDataToCloud(
       routinesMigrated: 1,
       sessionsMigrated: localSessions.length,
       prsMigrated: localPRs.length,
+      weightsMigrated: localWeights.length,
     };
   } catch (err: any) {
     console.error('Migration failed:', err);
@@ -64,6 +79,7 @@ export async function migrateGuestDataToCloud(
       routinesMigrated: 0,
       sessionsMigrated: 0,
       prsMigrated: 0,
+      weightsMigrated: 0,
       error: err.message || 'Unknown error during migration',
     };
   }

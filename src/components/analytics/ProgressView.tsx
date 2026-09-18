@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { 
   BarChart, 
   Bar, 
+  Cell,
   LineChart, 
   Line, 
   XAxis, 
@@ -10,7 +11,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { Award, TrendingUp, Calendar, Dumbbell, Activity, Filter } from 'lucide-react';
+import { Award, TrendingUp, TrendingDown, Calendar, Dumbbell, Activity, Filter } from 'lucide-react';
 import { WorkoutSession, PersonalRecord } from '../../types';
 
 interface ProgressViewProps {
@@ -22,6 +23,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
   const [timeframe, setTimeframe] = useState<'1W' | '1M' | '3M' | 'All'>('1M');
   const [selectedExercise, setSelectedExercise] = useState<string>('Pec Dec Fly');
   const [metricType, setMetricType] = useState<'weight' | '1rm' | 'volume'>('weight');
+  const [volumeMode, setVolumeMode] = useState<'weekly' | 'sessions'>('weekly');
 
   // Collect distinct exercises from history
   const allExerciseNames = Array.from(
@@ -71,6 +73,68 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
     date: new Date(s.startedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
     volume: s.totalVolume,
   }));
+
+  // Weekly Volume Comparison Data (Grouped by calendar weeks)
+  const generateWeeklyVolumeData = () => {
+    const now = new Date();
+    const currentMonday = new Date(now);
+    const day = currentMonday.getDay();
+    const diff = currentMonday.getDate() - day + (day === 0 ? -6 : 1);
+    currentMonday.setDate(diff);
+    currentMonday.setHours(0, 0, 0, 0);
+
+    const weeks = [];
+    const numWeeks = 6;
+
+    for (let i = numWeeks - 1; i >= 0; i--) {
+      const weekStart = new Date(currentMonday);
+      weekStart.setDate(weekStart.getDate() - i * 7);
+
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const isCurrent = i === 0;
+      const isPrevious = i === 1;
+
+      let label = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+      if (isCurrent) label = 'This Week';
+      else if (isPrevious) label = 'Last Week';
+      else label = `${i}w ago`;
+
+      const weekSessions = completed.filter((s) => {
+        const sTime = new Date(s.completedAt || s.startedAt).getTime();
+        return sTime >= weekStart.getTime() && sTime <= weekEnd.getTime();
+      });
+
+      const volume = weekSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
+      const workouts = weekSessions.length;
+
+      weeks.push({
+        label,
+        shortLabel: isCurrent ? 'This Wk' : isPrevious ? 'Last Wk' : `${i}w ago`,
+        volume,
+        workouts,
+        isCurrent,
+        dateRange: `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+      });
+    }
+
+    return weeks;
+  };
+
+  const weeklyVolumeData = generateWeeklyVolumeData();
+  const thisWeekData = weeklyVolumeData.find((w) => w.isCurrent) || { volume: 0, workouts: 0 };
+  const lastWeekData = weeklyVolumeData.find((w) => w.label === 'Last Week') || { volume: 0, workouts: 0 };
+
+  let weeklyChangePercent = 0;
+  if (lastWeekData.volume > 0) {
+    weeklyChangePercent = Math.round(
+      ((thisWeekData.volume - lastWeekData.volume) / lastWeekData.volume) * 100
+    );
+  } else if (thisWeekData.volume > 0) {
+    weeklyChangePercent = 100;
+  }
 
   // Muscle Group Analytics calculation
   const muscleCounts: Record<string, number> = {
@@ -199,48 +263,153 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
         </div>
       </div>
 
-      {/* 2. Total Workout Volume Card */}
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3 shadow-xl">
-        <div className="flex items-center justify-between">
+      {/* 2. Weekly Training Volume Comparison Card */}
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-4 shadow-xl">
+        <div className="flex items-start justify-between">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-              TRAINING VOLUME
-            </span>
-            <h3 className="text-base font-bold text-white">Recent Sessions Volume</h3>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                WEEKLY LOAD OVERLOAD
+              </span>
+              {weeklyChangePercent > 0 ? (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-white border border-zinc-800 flex items-center gap-1 font-bold">
+                  <TrendingUp className="w-3 h-3 text-white" /> +{weeklyChangePercent}% vs Last Wk
+                </span>
+              ) : weeklyChangePercent < 0 ? (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-1">
+                  <TrendingDown className="w-3 h-3 text-zinc-400" /> {weeklyChangePercent}% vs Last Wk
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">
+                  Matched Last Wk
+                </span>
+              )}
+            </div>
+            <h3 className="text-base font-bold text-white mt-1">This Week vs Previous Weeks</h3>
+            <p className="text-xs text-zinc-400 font-mono mt-0.5">
+              This Week: <span className="text-white font-bold">{thisWeekData.volume.toLocaleString()} kg</span> across {thisWeekData.workouts} workout{thisWeekData.workouts === 1 ? '' : 's'}
+            </p>
           </div>
-          <Dumbbell className="w-4 h-4 text-zinc-400" />
+
+          {/* Toggle View: Weekly vs Session */}
+          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono">
+            <button
+              onClick={() => setVolumeMode('weekly')}
+              className={`px-2 py-1 rounded transition-colors ${
+                volumeMode === 'weekly' ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Weekly
+            </button>
+            <button
+              onClick={() => setVolumeMode('sessions')}
+              className={`px-2 py-1 rounded transition-colors ${
+                volumeMode === 'sessions' ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Sessions
+            </button>
+          </div>
         </div>
 
-        <div className="h-36 w-full pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={volumeChartData}>
-              <XAxis
-                dataKey="name"
-                stroke="#52525b"
-                fontSize={10}
-                tickLine={false}
-                axisLine={{ stroke: '#27272a' }}
-              />
-              <YAxis
-                stroke="#52525b"
-                fontSize={10}
-                tickLine={false}
-                axisLine={{ stroke: '#27272a' }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#09090b',
-                  borderColor: '#27272a',
-                  borderRadius: '8px',
-                  fontSize: '11px',
-                  fontFamily: 'monospace',
-                }}
-                formatter={(val: any) => [`${val} kg`, 'Total Volume']}
-              />
-              <Bar dataKey="volume" fill="#ffffff" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Chart View */}
+        <div className="h-44 w-full pt-1">
+          {volumeMode === 'weekly' ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyVolumeData}>
+                <XAxis
+                  dataKey="shortLabel"
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                />
+                <YAxis
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 shadow-xl font-mono text-xs text-white space-y-1">
+                          <div className="font-bold text-white flex items-center justify-between gap-2">
+                            <span>{data.label}</span>
+                            {data.isCurrent && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-white text-black font-bold">CURRENT</span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-zinc-400">{data.dateRange}</div>
+                          <div className="text-white font-bold pt-1">
+                            {data.volume.toLocaleString()} kg total
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            {data.workouts} workout{data.workouts === 1 ? '' : 's'}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="volume" radius={[4, 4, 0, 0]}>
+                  {weeklyVolumeData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.isCurrent ? '#ffffff' : '#52525b'}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={volumeChartData}>
+                <XAxis
+                  dataKey="name"
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                />
+                <YAxis
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#09090b',
+                    borderColor: '#27272a',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                  }}
+                  formatter={(val: any) => [`${val} kg`, 'Total Volume']}
+                />
+                <Bar dataKey="volume" fill="#ffffff" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
+
+        {/* Legend */}
+        {volumeMode === 'weekly' && (
+          <div className="flex items-center justify-center space-x-4 pt-1 border-t border-zinc-900 text-[11px] font-mono text-zinc-400">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-white inline-block" />
+              <span>This Week</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-zinc-600 inline-block" />
+              <span>Previous Weeks</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. Muscle Group Analytics Distribution */}

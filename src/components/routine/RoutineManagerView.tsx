@@ -7,7 +7,8 @@ import {
   ArrowDown, 
   Sparkles, 
   Share2,
-  Dumbbell
+  Dumbbell,
+  Moon
 } from 'lucide-react';
 import { Routine, RoutineDay, ExerciseTarget } from '../../types';
 import { ExercisePickerModal } from '../common/ExercisePickerModal';
@@ -145,19 +146,36 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
     setSelectedDayIdx(targetIdx);
   };
 
-  // Add a new workout day
-  const handleAddDay = (name: string, estimatedMinutes: number) => {
+  // Add a new workout day or rest day
+  const handleAddDay = (name: string, estimatedMinutes: number, isRestDay?: boolean) => {
     const newDay: RoutineDay = {
       id: `day-${Date.now()}`,
       name,
       dayOrder: routine.days.length,
-      estimatedMinutes,
+      estimatedMinutes: isRestDay ? 0 : estimatedMinutes,
       exercises: [],
+      isRestDay: Boolean(isRestDay),
     };
 
     const newDays = [...routine.days, newDay];
     onSaveRoutine({ ...routine, days: newDays });
     setSelectedDayIdx(newDays.length - 1);
+  };
+
+  // Toggle Day Type between Workout and Rest Day
+  const handleToggleRestDay = (idx: number) => {
+    const newDays = [...routine.days];
+    const current = newDays[idx];
+    const willBeRest = !current.isRestDay;
+    newDays[idx] = {
+      ...current,
+      isRestDay: willBeRest,
+      estimatedMinutes: willBeRest ? 0 : 50,
+      name: willBeRest && (current.name.toLowerCase().includes('day') || current.name.toLowerCase().includes('workout'))
+        ? 'Rest & Recovery'
+        : current.name,
+    };
+    onSaveRoutine({ ...routine, days: newDays });
   };
 
   // Confirm delete day
@@ -294,13 +312,16 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
               <button
                 key={day.id}
                 onClick={() => setSelectedDayIdx(idx)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-mono border transition-all flex items-center space-x-2 ${
+                className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-mono border transition-all flex items-center space-x-1.5 ${
                   isSelected
                     ? 'bg-white text-black font-bold border-white shadow-glow-sm'
                     : 'bg-zinc-950 text-zinc-400 border-zinc-900 hover:border-zinc-700'
                 }`}
               >
                 <span>#{idx + 1}</span>
+                {day.isRestDay && (
+                  <Moon className={`w-3 h-3 ${isSelected ? 'text-black' : 'text-zinc-400'}`} />
+                )}
                 <span>{day.name}</span>
               </button>
             );
@@ -313,10 +334,17 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
         <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-4 shadow-xl">
           <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
             <div>
-              <span className="text-[10px] font-mono text-zinc-500 uppercase">
-                DAY {selectedDayIdx + 1} OF {routine.days.length}
-              </span>
-              <h3 className="text-lg font-bold text-white">{currentDay.name}</h3>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase">
+                  DAY {selectedDayIdx + 1} OF {routine.days.length}
+                </span>
+                {currentDay.isRestDay && (
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center gap-1">
+                    <Moon className="w-2.5 h-2.5" /> REST DAY
+                  </span>
+                )}
+              </div>
+              <h3 className="text-lg font-bold text-white mt-0.5">{currentDay.name}</h3>
             </div>
 
             <div className="flex items-center space-x-1">
@@ -346,17 +374,48 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
             </div>
           </div>
 
-          {/* Exercises for this Day */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-mono text-zinc-400 uppercase">
-              <span>Exercises ({currentDay.exercises.length})</span>
-              <button
-                onClick={() => setIsExercisePickerOpen(true)}
-                className="text-zinc-300 hover:text-white flex items-center gap-1 font-semibold"
-              >
-                <Plus className="w-3.5 h-3.5" /> Select Exercise
-              </button>
+          {/* If Rest Day: Show Recovery Card */}
+          {currentDay.isRestDay ? (
+            <div className="py-8 px-4 text-center rounded-xl bg-zinc-900/30 border border-zinc-900 space-y-3">
+              <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-200">
+                <Moon className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Scheduled Rest & Recovery</h4>
+                <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto leading-relaxed font-mono">
+                  No workouts scheduled for this day. Rest allows muscle tissue to repair and build stronger. Take time to hydrate, stretch, and get quality sleep.
+                </p>
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={() => handleToggleRestDay(selectedDayIdx)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 hover:text-white flex items-center gap-1.5 mx-auto transition-colors"
+                >
+                  <Dumbbell className="w-3.5 h-3.5" /> Convert to Workout Day
+                </button>
+              </div>
             </div>
+          ) : (
+            /* Exercises for this Workout Day */
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-mono text-zinc-400 uppercase">
+                <span>Exercises ({currentDay.exercises.length})</span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleToggleRestDay(selectedDayIdx)}
+                    className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+                    title="Change to Rest Day"
+                  >
+                    <Moon className="w-3 h-3" /> Make Rest Day
+                  </button>
+                  <button
+                    onClick={() => setIsExercisePickerOpen(true)}
+                    className="text-zinc-300 hover:text-white flex items-center gap-1 font-semibold"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Select Exercise
+                  </button>
+                </div>
+              </div>
 
             {/* List of Exercises */}
             <div className="space-y-2">
@@ -403,8 +462,9 @@ export const RoutineManagerView: React.FC<RoutineManagerViewProps> = ({
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    )}
 
       {/* Popular Routine Splits Switcher */}
       <div className="space-y-3 pt-2">

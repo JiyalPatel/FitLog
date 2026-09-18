@@ -7,24 +7,29 @@ interface HeaderProps {
   profile: UserProfile;
   streak: number;
   onOpenProfile: () => void;
+  onGoHome?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ profile, streak, onOpenProfile }) => {
+export const Header: React.FC<HeaderProps> = ({ profile, streak, onOpenProfile, onGoHome }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-black/80 backdrop-blur-md border-b border-surface-300 px-4 py-3 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center font-mono font-black text-black text-base shadow-glow-sm">
+      <button
+        onClick={onGoHome}
+        className="flex items-center space-x-2 text-left group transition-transform active:scale-95 cursor-pointer focus:outline-none"
+        title="Return to Home Dashboard"
+      >
+        <div className="w-8 h-8 rounded-lg bg-white group-hover:bg-zinc-200 transition-colors flex items-center justify-center font-mono font-black text-black text-base shadow-glow-sm">
           F
         </div>
         <div>
-          <h1 className="text-sm font-semibold tracking-wider uppercase text-white font-mono leading-none m-0">
+          <h1 className="text-sm font-semibold tracking-wider uppercase text-white font-mono leading-none m-0 group-hover:text-zinc-200 transition-colors">
             FITLOG
           </h1>
           <span className="text-[10px] text-zinc-500 font-mono">
             {profile.isGuest ? 'OFFLINE JOURNAL' : 'SAVED TO ACCOUNT'}
           </span>
         </div>
-      </div>
+      </button>
 
       <div className="flex items-center space-x-2">
         {/* Streak Counter */}

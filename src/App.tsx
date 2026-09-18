@@ -9,10 +9,12 @@ import { WorkoutSummaryModal } from './components/workout/WorkoutSummaryModal';
 import { RoutineManagerView } from './components/routine/RoutineManagerView';
 import { ProgressView } from './components/analytics/ProgressView';
 import { ProfileView } from './components/profile/ProfileView';
+import { WeightTrackerView } from './components/weight/WeightTrackerView';
+import { LogWeightModal } from './components/weight/LogWeightModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 
-import { Routine, WorkoutSession, PersonalRecord, UserProfile } from './types';
+import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from './types';
 import { dataRepository } from './services/storage/dataRepository';
 import { localStore } from './services/storage/localStorageStore';
 import { calculateWorkoutStreak } from './services/engine/rollingQueue';
@@ -28,6 +30,11 @@ export function App() {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
 
+  // Body weight tracking state
+  const [weightEntries, setWeightEntries] = useState<WeightEntry[]>([]);
+  const [weightGoal, setWeightGoal] = useState<WeightGoal | null>(null);
+  const [isDashboardLogWeightOpen, setIsDashboardLogWeightOpen] = useState<boolean>(false);
+
   // Active workout state
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [completedSummarySession, setCompletedSummarySession] = useState<WorkoutSession | null>(null);
@@ -38,17 +45,20 @@ export function App() {
 
   // Load all repository data
   const loadData = useCallback(async () => {
-    const [p, r, s, records] = await Promise.all([
+    const [p, r, s, records, weights] = await Promise.all([
       dataRepository.getProfile(),
       dataRepository.getRoutine(),
       dataRepository.getSessions(),
       dataRepository.getPRs(),
+      dataRepository.getWeightEntries(),
     ]);
 
     setProfile(p);
     setRoutine(r);
     setSessions(s);
     setPRs(records);
+    setWeightEntries(weights);
+    setWeightGoal(dataRepository.getWeightGoal());
 
     const currentActive = dataRepository.getActiveSession();
     setActiveSession(currentActive);
@@ -133,11 +143,34 @@ export function App() {
     // Save session
     await dataRepository.saveSession(finishedSession);
 
-    // Save any PRs broken during this workout
-    if (finishedSession.prsAchieved && finishedSession.prsAchieved.length > 0) {
-      for (const pr of finishedSession.prsAchieved) {
-        await dataRepository.savePR(pr);
+    // Save any PRs broken during this workout, plus record baselines for new exercises
+    const prsToSave = [...(finishedSession.prsAchieved || [])];
+    for (const ex of finishedSession.exercises) {
+      const hasPrior = prs.some(
+        (p) => p.exerciseName.toLowerCase() === ex.exerciseName.toLowerCase() && p.prType === 'weight'
+      );
+      if (!hasPrior && !prsToSave.some((p) => p.exerciseName.toLowerCase() === ex.exerciseName.toLowerCase())) {
+        const completedSets = ex.sets.filter((s) => s.isCompleted && s.weight > 0);
+        if (completedSets.length > 0) {
+          const maxWeight = Math.max(...completedSets.map((s) => s.weight));
+          const maxSet = completedSets.find((s) => s.weight === maxWeight);
+          if (maxSet) {
+            prsToSave.push({
+              id: `pr-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+              exerciseName: ex.exerciseName,
+              prType: 'weight',
+              prValue: maxSet.weight,
+              weight: maxSet.weight,
+              reps: maxSet.reps,
+              achievedAt: new Date().toISOString(),
+            });
+          }
+        }
       }
+    }
+
+    for (const pr of prsToSave) {
+      await dataRepository.savePR(pr);
     }
 
     // Advance Sequential Routine Queue
@@ -153,8 +186,24 @@ export function App() {
     dataRepository.saveActiveSession(null);
     setActiveSession(null);
 
+    // Refresh state
+    await loadData();
+
     // Trigger celebratory summary modal
     setCompletedSummarySession(finishedSession);
+  };
+
+  // Advance routine day (for Rest Days)
+  const handleAdvanceRoutineDay = async (markAsCompleted = false) => {
+    const nextIndex = (routine.currentQueueIndex + 1) % routine.days.length;
+    const updatedRoutine: Routine = {
+      ...routine,
+      currentQueueIndex: nextIndex,
+      lastCompletedDate: markAsCompleted ? new Date().toISOString() : routine.lastCompletedDate,
+    };
+    await dataRepository.saveRoutine(updatedRoutine);
+    setRoutine(updatedRoutine);
+    await loadData();
   };
 
   // Cancel workout
@@ -162,6 +211,22 @@ export function App() {
     dataRepository.saveActiveSession(null);
     setActiveSession(null);
     setActiveTab('home');
+  };
+
+  // Body weight tracking handlers
+  const handleSaveWeightEntry = async (entry: WeightEntry) => {
+    await dataRepository.saveWeightEntry(entry);
+    await loadData();
+  };
+
+  const handleDeleteWeightEntry = async (id: string) => {
+    await dataRepository.deleteWeightEntry(id);
+    await loadData();
+  };
+
+  const handleSaveWeightGoal = async (goal: WeightGoal | null) => {
+    dataRepository.saveWeightGoal(goal);
+    setWeightGoal(goal);
   };
 
   // If user hasn't chosen a mode yet, show Welcome / Login screen
@@ -188,6 +253,7 @@ export function App() {
         profile={profile}
         streak={streak}
         onOpenProfile={() => setIsProfileOpen(true)}
+        onGoHome={() => setActiveTab('home')}
       />
 
       {/* Main Tab Views */}
@@ -200,9 +266,16 @@ export function App() {
             streak={streak}
             weeklyStats={weeklyStats}
             overloadTips={overloadTips}
+            weightEntries={weightEntries}
+            weightGoal={weightGoal}
+            weightUnit={profile.weightUnit || 'kg'}
             onStartWorkout={handleStartWorkout}
+            onCompleteRestDay={() => handleAdvanceRoutineDay(true)}
+            onSkipRestDay={() => handleAdvanceRoutineDay(false)}
             onViewProgress={() => setActiveTab('progress')}
             onViewRoutine={() => setActiveTab('routine')}
+            onViewWeight={() => setActiveTab('weight')}
+            onQuickLogWeight={() => setIsDashboardLogWeightOpen(true)}
           />
         )}
 
@@ -235,6 +308,17 @@ export function App() {
               </button>
             </div>
           )
+        )}
+
+        {activeTab === 'weight' && (
+          <WeightTrackerView
+            entries={weightEntries}
+            goal={weightGoal}
+            profile={profile}
+            onSaveEntry={handleSaveWeightEntry}
+            onDeleteEntry={handleDeleteWeightEntry}
+            onSaveGoal={handleSaveWeightGoal}
+          />
         )}
 
         {activeTab === 'progress' && (
@@ -303,6 +387,15 @@ export function App() {
           loadData();
           setIsAuthOpen(false);
         }}
+      />
+
+      {/* Quick Log Weight Modal for Dashboard */}
+      <LogWeightModal
+        isOpen={isDashboardLogWeightOpen}
+        onClose={() => setIsDashboardLogWeightOpen(false)}
+        onSave={handleSaveWeightEntry}
+        defaultWeight={weightEntries[0]?.weight || 70.0}
+        weightUnit={profile.weightUnit || 'kg'}
       />
     </AppLayout>
   );

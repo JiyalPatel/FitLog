@@ -1,9 +1,9 @@
 // src/components/layout/BottomNav.tsx
 import React from 'react';
-import { Home, Dumbbell, BarChart3, CalendarRange } from 'lucide-react';
+import { Home, Dumbbell, Scale, BarChart3, CalendarRange } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export type TabType = 'home' | 'workout' | 'progress' | 'routine';
+export type TabType = 'home' | 'workout' | 'weight' | 'progress' | 'routine';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -19,6 +19,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const tabs = [
     { id: 'home' as TabType, label: 'Home', icon: Home },
     { id: 'workout' as TabType, label: 'Workout', icon: Dumbbell, hasBadge: hasActiveSession },
+    { id: 'weight' as TabType, label: 'Weight', icon: Scale },
     { id: 'progress' as TabType, label: 'Progress', icon: BarChart3 },
     { id: 'routine' as TabType, label: 'Routine', icon: CalendarRange },
   ];
@@ -34,7 +35,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               key={tab.id}
               onClick={() => onSelectTab(tab.id)}
-              className="relative flex flex-col items-center justify-center w-16 py-1 text-xs transition-colors"
+              className="relative flex flex-col items-center justify-center flex-1 max-w-[68px] py-1 text-xs transition-colors"
             >
               <div className="relative">
                 <Icon

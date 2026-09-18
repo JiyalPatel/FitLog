@@ -19,6 +19,7 @@ export interface RoutineDay {
   dayOrder: number;
   estimatedMinutes: number;
   exercises: ExerciseTarget[];
+  isRestDay?: boolean;
 }
 
 export interface Routine {
@@ -90,6 +91,24 @@ export interface ProgressiveOverloadTip {
   type: 'increase_weight' | 'increase_reps' | 'form_focus';
 }
 
+export interface WeightEntry {
+  id: string;
+  weight: number;
+  unit: 'kg' | 'lbs';
+  date: string; // YYYY-MM-DD
+  notes?: string;
+  createdAt: string; // ISO string
+}
+
+export type WeightGoalType = 'lose' | 'gain' | 'maintain';
+
+export interface WeightGoal {
+  targetWeight: number;
+  startWeight: number;
+  goalType: WeightGoalType;
+  targetDate?: string;
+}
+
 export interface UserProfile {
   id: string;
   email?: string;
@@ -99,6 +118,8 @@ export interface UserProfile {
   restTimerDefaultSeconds: number;
   soundEnabled: boolean;
   createdAt: string;
+  targetWeight?: number;
+  weightGoal?: WeightGoal;
 }
 
 export interface QueueItem {

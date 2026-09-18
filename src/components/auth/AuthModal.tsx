@@ -30,7 +30,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
 
     if (!isSupabaseConfigured || !supabase) {
       setMessage({
-        text: 'Supabase credentials are not configured yet. You are safely using Guest Mode (all data stored in your browser). Add VITE_SUPABASE_URL to connect to the cloud.',
+        text: 'Cloud sync is currently unavailable in this environment. Your data is stored safely on this device.',
         isError: true,
       });
       return;

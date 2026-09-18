@@ -13,7 +13,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { UserProfile } from '../../types';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { localStore } from '../../services/storage/localStorageStore';
 import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
 
@@ -87,7 +87,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             className="w-full py-3 px-4 rounded-xl bg-white text-black font-semibold text-xs font-mono tracking-wider flex items-center justify-center space-x-2 shadow-glow-sm hover:bg-zinc-200 transition-colors uppercase"
           >
             <CloudUpload className="w-4 h-4" />
-            <span>SAVE WORKOUTS TO FREE ACCOUNT</span>
+            <span>SAVE YOUR DATA TO CLOUD</span>
           </button>
         ) : (
           <button
@@ -175,11 +175,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Backup & Sync Status Banner */}
+      {/* Cloud Storage & Sync Section */}
       <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3 shadow-xl">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-            <Database className="w-3.5 h-3.5 text-white" /> Cloud Backup Status
+            <Database className="w-3.5 h-3.5 text-white" /> Cloud Storage & Sync
           </span>
           <span
             className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
@@ -188,25 +188,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 : 'bg-zinc-900 text-zinc-500 border-zinc-800'
             }`}
           >
-            {!profile.isGuest ? 'SAVED TO ACCOUNT' : 'SAVED ON THIS DEVICE'}
+            {!profile.isGuest ? 'SAVED TO CLOUD' : 'SAVED LOCALLY'}
           </span>
         </div>
 
-        <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between text-xs font-mono">
-          <div className="flex items-center space-x-2">
-            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className="text-zinc-300">Supabase Cloud</span>
+        <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-start space-x-3 text-xs">
+          <CloudUpload className="w-4 h-4 text-white mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="font-semibold text-white font-mono text-xs">
+              {!profile.isGuest ? 'Cloud Backup Active' : 'Offline Local Journal'}
+            </div>
+            <p className="text-zinc-400 mt-1 leading-relaxed text-[11px] font-mono">
+              {!profile.isGuest
+                ? 'All your workouts, personal records, and routines are safely backed up to your cloud account and stay in sync across devices.'
+                : 'Your workout history is currently saved on this device. Save your data to the cloud anytime to enable multi-device sync and automatic backups.'}
+            </p>
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono">
-            {isSupabaseConfigured ? 'CONNECTED' : 'NOT CONNECTED'}
-          </span>
         </div>
-
-        <p className="text-xs text-zinc-400 leading-relaxed">
-          {!profile.isGuest
-            ? 'All your workouts, personal records, and routines are safely backed up to your Supabase cloud database.'
-            : 'Your workout history is currently saved on this phone. Create a free account or sign in to sync all your workouts safely to your Supabase cloud.'}
-        </p>
       </div>
 
       {/* Reset Data Danger Zone */}

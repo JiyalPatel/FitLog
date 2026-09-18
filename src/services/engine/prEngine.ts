@@ -1,5 +1,5 @@
 // src/services/engine/prEngine.ts
-import { PersonalRecord, PRType, WorkoutSet } from '../../types';
+import { PersonalRecord, WorkoutSet, WorkoutSession } from '../../types';
 
 /**
  * Calculates Estimated 1RM (One Rep Max) using the Epley formula:
@@ -14,75 +14,90 @@ export function calculateEstimated1RM(weight: number, reps: number): number {
 }
 
 /**
- * Checks if a newly logged set beats existing personal records.
- * Returns the PR details if it is a new record, or null otherwise.
+ * Finds the all-time maximum weight logged for an exercise across:
+ * 1. Existing PR records
+ * 2. All completed historical workout sessions
+ */
+export function getHistoricalMaxWeight(
+  exerciseName: string,
+  existingPRs: PersonalRecord[] = [],
+  previousSessions: WorkoutSession[] = []
+): { maxWeight: number; repsAtMax: number } {
+  const normName = exerciseName.trim().toLowerCase();
+  let maxWeight = 0;
+  let repsAtMax = 0;
+
+  // 1. From existing PR records
+  if (existingPRs && Array.isArray(existingPRs)) {
+    for (const pr of existingPRs) {
+      if (pr.exerciseName && pr.exerciseName.trim().toLowerCase() === normName) {
+        const val = pr.prValue || pr.weight || 0;
+        if (val > maxWeight) {
+          maxWeight = val;
+          repsAtMax = pr.reps || 0;
+        }
+      }
+    }
+  }
+
+  // 2. From historical completed workout sessions
+  if (previousSessions && Array.isArray(previousSessions)) {
+    for (const session of previousSessions) {
+      if (session.status !== 'completed' || !session.exercises) continue;
+      for (const ex of session.exercises) {
+        if (ex.exerciseName && ex.exerciseName.trim().toLowerCase() === normName && ex.sets) {
+          for (const s of ex.sets) {
+            if (s.isCompleted && s.weight > maxWeight) {
+              maxWeight = s.weight;
+              repsAtMax = s.reps;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { maxWeight, repsAtMax };
+}
+
+/**
+ * Evaluates whether a newly logged set beats the historical record strictly based on WEIGHT.
+ * Returns a PersonalRecord if it strictly exceeds prior records and prior sets in this session.
  */
 export function evaluateSetForPR(
   exerciseName: string,
   set: WorkoutSet,
-  existingPRs: PersonalRecord[]
+  existingPRs: PersonalRecord[] = [],
+  previousSessions: WorkoutSession[] = [],
+  currentSessionCompletedSets: WorkoutSet[] = []
 ): PersonalRecord | null {
-  if (!set.isCompleted || set.weight <= 0 || set.reps <= 0) {
+  if (!set.isCompleted || set.weight <= 0) {
     return null;
   }
 
-  const exercisePRs = existingPRs.filter(
-    (p) => p.exerciseName.toLowerCase() === exerciseName.toLowerCase()
+  const { maxWeight: historicalMax } = getHistoricalMaxWeight(
+    exerciseName,
+    existingPRs,
+    previousSessions
   );
 
-  const estimated1RM = calculateEstimated1RM(set.weight, set.reps);
-  const setVolume = set.weight * set.reps;
+  // Highest weight from other already-completed sets in this session for this exercise
+  let sessionPriorMax = 0;
+  for (const otherSet of currentSessionCompletedSets) {
+    if (otherSet.id !== set.id && otherSet.isCompleted && otherSet.weight > sessionPriorMax) {
+      sessionPriorMax = otherSet.weight;
+    }
+  }
 
-  // 1. Check Max Weight PR
-  const weightPR = exercisePRs.find((p) => p.prType === 'weight');
-  if (!weightPR || set.weight > weightPR.prValue) {
+  // A PR is achieved strictly when lifting MORE WEIGHT than the previous all-time record
+  // AND exceeding any prior set already completed in this session.
+  // (If no prior history exists at all, the first workout establishes the initial baseline).
+  if (historicalMax > 0 && set.weight > historicalMax && set.weight > sessionPriorMax) {
     return {
-      id: `pr-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      id: `pr-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       exerciseName,
       prType: 'weight',
       prValue: set.weight,
-      weight: set.weight,
-      reps: set.reps,
-      achievedAt: new Date().toISOString(),
-    };
-  }
-
-  // 2. Check 1RM PR
-  const oneRmPR = exercisePRs.find((p) => p.prType === '1rm');
-  if (!oneRmPR || estimated1RM > oneRmPR.prValue) {
-    return {
-      id: `pr-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-      exerciseName,
-      prType: '1rm',
-      prValue: estimated1RM,
-      weight: set.weight,
-      reps: set.reps,
-      achievedAt: new Date().toISOString(),
-    };
-  }
-
-  // 3. Check Max Reps PR for same or higher weight
-  const repsPR = exercisePRs.find((p) => p.prType === 'reps' && p.weight === set.weight);
-  if (repsPR && set.reps > repsPR.prValue) {
-    return {
-      id: `pr-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-      exerciseName,
-      prType: 'reps',
-      prValue: set.reps,
-      weight: set.weight,
-      reps: set.reps,
-      achievedAt: new Date().toISOString(),
-    };
-  }
-
-  // 4. Check Set Volume PR
-  const volumePR = exercisePRs.find((p) => p.prType === 'volume');
-  if (!volumePR || setVolume > volumePR.prValue) {
-    return {
-      id: `pr-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-      exerciseName,
-      prType: 'volume',
-      prValue: setVolume,
       weight: set.weight,
       reps: set.reps,
       achievedAt: new Date().toISOString(),
@@ -93,20 +108,20 @@ export function evaluateSetForPR(
 }
 
 /**
- * Returns best records summary for a specific exercise
+ * Returns best weight record summary for a specific exercise
  */
-export function getExercisePRSummary(exerciseName: string, prs: PersonalRecord[]) {
-  const matches = prs.filter(
-    (p) => p.exerciseName.toLowerCase() === exerciseName.toLowerCase()
+export function getExercisePRSummary(
+  exerciseName: string,
+  prs: PersonalRecord[] = [],
+  previousSessions: WorkoutSession[] = []
+) {
+  const { maxWeight, repsAtMax } = getHistoricalMaxWeight(
+    exerciseName,
+    prs,
+    previousSessions
   );
 
-  const bestWeight = matches.find((p) => p.prType === 'weight');
-  const best1RM = matches.find((p) => p.prType === '1rm');
-  const bestVolume = matches.find((p) => p.prType === 'volume');
-
   return {
-    bestWeight: bestWeight ? `${bestWeight.weight} kg × ${bestWeight.reps}` : null,
-    best1RM: best1RM ? `~${best1RM.prValue} kg` : null,
-    bestVolume: bestVolume ? `${bestVolume.prValue} kg` : null,
+    bestWeight: maxWeight > 0 ? `${maxWeight} kg${repsAtMax > 0 ? ` × ${repsAtMax}` : ''}` : null,
   };
 }

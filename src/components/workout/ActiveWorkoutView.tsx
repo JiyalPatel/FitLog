@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WorkoutSession, WorkoutExerciseLog, WorkoutSet, PersonalRecord } from '../../types';
-import { evaluateSetForPR } from '../../services/engine/prEngine';
+import { evaluateSetForPR, getHistoricalMaxWeight } from '../../services/engine/prEngine';
 import { soundEffects } from '../../services/audio/soundEffects';
 import { ExercisePickerModal } from '../common/ExercisePickerModal';
 import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
@@ -115,10 +115,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
 
   // Get PR for an exercise
   const getExercisePR = (exerciseName: string) => {
-    const match = prs.find(
-      (p) => p.exerciseName.toLowerCase() === exerciseName.toLowerCase() && p.prType === 'weight'
-    );
-    return match ? `${match.weight}kg × ${match.reps}` : null;
+    const { maxWeight, repsAtMax } = getHistoricalMaxWeight(exerciseName, prs, previousSessions);
+    return maxWeight > 0 ? `${maxWeight}kg${repsAtMax > 0 ? ` × ${repsAtMax}` : ''}` : null;
   };
 
   // Handle Set Toggle Completed
@@ -132,9 +130,18 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
     if (willBeCompleted) {
       if (soundEnabled) soundEffects.playSetComplete();
 
-      // Check for PR
+      // Check for PR strictly based on weight
       const exerciseName = updatedExercises[exerciseIdx].exerciseName;
-      const detectedPR = evaluateSetForPR(exerciseName, targetSet, prs);
+      const currentSessionCompletedSets = updatedExercises[exerciseIdx].sets.filter(
+        (s, idx) => idx !== setIdx && s.isCompleted
+      );
+      const detectedPR = evaluateSetForPR(
+        exerciseName,
+        targetSet,
+        prs,
+        previousSessions,
+        currentSessionCompletedSets
+      );
 
       if (detectedPR) {
         targetSet.isPR = true;
@@ -151,6 +158,8 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
         if (!currentPrs.some((p) => p.id === detectedPR.id)) {
           session.prsAchieved = [...currentPrs, detectedPR];
         }
+      } else {
+        targetSet.isPR = false;
       }
 
       // Trigger Rest Timer
@@ -159,6 +168,12 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
       setIsRestTimerPaused(false);
     } else {
       targetSet.isPR = false;
+      if (session.prsAchieved) {
+        const exNameNorm = updatedExercises[exerciseIdx].exerciseName.toLowerCase();
+        session.prsAchieved = session.prsAchieved.filter(
+          (p) => !(p.exerciseName.toLowerCase() === exNameNorm && p.weight === targetSet.weight)
+        );
+      }
     }
 
     updatedExercises[exerciseIdx].sets[setIdx] = targetSet;

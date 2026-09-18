@@ -1,5 +1,5 @@
 // src/services/storage/dataRepository.ts
-import { Routine, WorkoutSession, PersonalRecord, UserProfile } from '../../types';
+import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from '../../types';
 import { localStore } from './localStorageStore';
 import { supabaseStore } from './supabaseStore';
 import { supabase } from '../../lib/supabase';
@@ -125,6 +125,39 @@ class DataRepository {
 
   saveActiveSession(session: WorkoutSession | null): void {
     localStore.saveActiveSession(session);
+    this.notify();
+  }
+
+  async getWeightEntries(): Promise<WeightEntry[]> {
+    if (this.currentUserId) {
+      const cloudEntries = await supabaseStore.getWeightEntries(this.currentUserId);
+      if (cloudEntries.length > 0) return cloudEntries;
+    }
+    return localStore.getWeightEntries();
+  }
+
+  async saveWeightEntry(entry: WeightEntry): Promise<void> {
+    if (this.currentUserId) {
+      await supabaseStore.saveWeightEntry(this.currentUserId, entry);
+    }
+    localStore.saveWeightEntry(entry);
+    this.notify();
+  }
+
+  async deleteWeightEntry(entryId: string): Promise<void> {
+    if (this.currentUserId) {
+      await supabaseStore.deleteWeightEntry(this.currentUserId, entryId);
+    }
+    localStore.deleteWeightEntry(entryId);
+    this.notify();
+  }
+
+  getWeightGoal(): WeightGoal | null {
+    return localStore.getWeightGoal();
+  }
+
+  saveWeightGoal(goal: WeightGoal | null): void {
+    localStore.saveWeightGoal(goal);
     this.notify();
   }
 }

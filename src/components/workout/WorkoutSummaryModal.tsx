@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti';
 import { Award, Clock, Flame, Dumbbell, TrendingUp, CheckCircle2, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WorkoutSession, WorkoutSession as SessionType } from '../../types';
-import { calculateWorkoutScore } from '../../services/engine/scoringEngine';
+import { calculateWorkoutScore, calculateBestImprovement } from '../../services/engine/scoringEngine';
 
 interface WorkoutSummaryModalProps {
   session: WorkoutSession;
@@ -18,6 +18,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
   onClose,
 }) => {
   const scoreBreakdown = calculateWorkoutScore(session, previousSessions);
+  const bestImprovement = calculateBestImprovement(session, previousSessions);
 
   useEffect(() => {
     // Monochrome celebration confetti (white, silver, slate particles)
@@ -107,10 +108,15 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
         {/* Best Improvement Callout */}
         <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-900 text-left flex items-start space-x-3">
           <TrendingUp className="w-4 h-4 text-white mt-0.5 flex-shrink-0" />
-          <div className="text-xs">
-            <div className="font-semibold text-white">Best Improvement</div>
-            <div className="text-zinc-400 mt-0.5">
-              Pec Dec Fly — Stronger contraction & +2.5 kg overload vs last week.
+          <div className="text-xs flex-1">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-white">Best Improvement</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
+                {bestImprovement.headline}
+              </span>
+            </div>
+            <div className="text-zinc-400 mt-1 leading-relaxed font-mono text-[11px]">
+              {bestImprovement.detail}
             </div>
           </div>
         </div>

@@ -149,6 +149,149 @@ export function calculateWeeklyStats(
   };
 }
 
+export interface BestImprovement {
+  exerciseName: string;
+  headline: string;
+  detail: string;
+}
+
+/**
+ * Dynamically computes the best improvement in a finished session
+ * by comparing each exercise against the most recent session containing it.
+ */
+export function calculateBestImprovement(
+  session: WorkoutSession,
+  previousSessions: WorkoutSession[] = []
+): BestImprovement {
+  if (!session.exercises || session.exercises.length === 0) {
+    return {
+      exerciseName: 'Great Effort',
+      headline: 'Session Complete',
+      detail: 'Consistent training is the foundation of progressive overload.',
+    };
+  }
+
+  // Filter valid completed past sessions (excluding current session if present)
+  const pastSessions = (previousSessions || [])
+    .filter((s) => s.id !== session.id && s.status === 'completed' && s.exercises)
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+
+  let bestCandidate: {
+    score: number;
+    exerciseName: string;
+    headline: string;
+    detail: string;
+  } | null = null;
+
+  for (const currEx of session.exercises) {
+    const completedSets = currEx.sets?.filter((s) => s.isCompleted && s.weight > 0) || [];
+    if (completedSets.length === 0) continue;
+
+    const currentMaxWeight = Math.max(...completedSets.map((s) => s.weight));
+    const maxWeightSet = completedSets.find((s) => s.weight === currentMaxWeight);
+    const currentRepsAtMax = maxWeightSet ? maxWeightSet.reps : 0;
+    const currentVolume = completedSets.reduce((acc, s) => acc + s.weight * s.reps, 0);
+
+    // Check if a PR was achieved on this exercise
+    const prAchieved = session.prsAchieved?.find(
+      (p) => p.exerciseName.toLowerCase() === currEx.exerciseName.toLowerCase()
+    );
+
+    if (prAchieved) {
+      const prScore = 500 + prAchieved.weight;
+      if (!bestCandidate || prScore > bestCandidate.score) {
+        bestCandidate = {
+          score: prScore,
+          exerciseName: currEx.exerciseName,
+          headline: 'New Personal Record',
+          detail: `${currEx.exerciseName} — Broke all-time record with ${prAchieved.weight} kg × ${prAchieved.reps} reps!`,
+        };
+      }
+      continue;
+    }
+
+    // Find the most recent previous session that included this exercise
+    let priorEx: { sets: { weight: number; reps: number; isCompleted: boolean }[] } | null = null;
+    for (const prevS of pastSessions) {
+      const match = prevS.exercises.find(
+        (e) => e.exerciseName.toLowerCase() === currEx.exerciseName.toLowerCase()
+      );
+      if (match && match.sets && match.sets.some((s) => s.isCompleted && s.weight > 0)) {
+        priorEx = match;
+        break;
+      }
+    }
+
+    if (priorEx) {
+      const priorCompleted = priorEx.sets.filter((s) => s.isCompleted && s.weight > 0);
+      const priorMaxWeight = Math.max(...priorCompleted.map((s) => s.weight));
+      const priorMaxSet = priorCompleted.find((s) => s.weight === priorMaxWeight);
+      const priorRepsAtMax = priorMaxSet ? priorMaxSet.reps : 0;
+      const priorVolume = priorCompleted.reduce((acc, s) => acc + s.weight * s.reps, 0);
+
+      const weightDiff = Math.round((currentMaxWeight - priorMaxWeight) * 10) / 10;
+      const volDiff = currentVolume - priorVolume;
+
+      // 1. Weight Overload
+      if (weightDiff > 0) {
+        const score = 200 + weightDiff * 10;
+        if (!bestCandidate || score > bestCandidate.score) {
+          bestCandidate = {
+            score,
+            exerciseName: currEx.exerciseName,
+            headline: 'Weight Overload',
+            detail: `${currEx.exerciseName} — +${weightDiff} kg overload (${currentMaxWeight} kg vs ${priorMaxWeight} kg last time).`,
+          };
+        }
+      }
+      // 2. Rep Overload at same weight
+      else if (weightDiff === 0 && currentRepsAtMax > priorRepsAtMax) {
+        const repDiff = currentRepsAtMax - priorRepsAtMax;
+        const score = 100 + repDiff * 5;
+        if (!bestCandidate || score > bestCandidate.score) {
+          bestCandidate = {
+            score,
+            exerciseName: currEx.exerciseName,
+            headline: 'Rep Progression',
+            detail: `${currEx.exerciseName} — +${repDiff} extra rep${repDiff > 1 ? 's' : ''} at ${currentMaxWeight} kg (${currentRepsAtMax} vs ${priorRepsAtMax}).`,
+          };
+        }
+      }
+      // 3. Volume Overload
+      else if (volDiff > 0) {
+        const score = 50 + Math.min(40, Math.round(volDiff / 20));
+        if (!bestCandidate || score > bestCandidate.score) {
+          bestCandidate = {
+            score,
+            exerciseName: currEx.exerciseName,
+            headline: 'Volume Increase',
+            detail: `${currEx.exerciseName} — +${volDiff} kg total volume progression vs last session.`,
+          };
+        }
+      }
+    } else {
+      // First time performing this exercise - baseline
+      const score = 10 + currentVolume / 100;
+      if (!bestCandidate || score > bestCandidate.score) {
+        bestCandidate = {
+          score,
+          exerciseName: currEx.exerciseName,
+          headline: 'Benchmark Established',
+          detail: `${currEx.exerciseName} — Solid baseline established at ${currentMaxWeight} kg (${completedSets.length} sets).`,
+        };
+      }
+    }
+  }
+
+  return (
+    bestCandidate || {
+      exerciseName: session.name,
+      headline: 'Target Maintained',
+      detail: `${session.name} completed with high consistency and discipline.`,
+    }
+  );
+}
+
 function getWeekNumber(date: Date): number {
   const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
   const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;

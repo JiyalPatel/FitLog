@@ -1,5 +1,4 @@
-// src/services/storage/localStorageStore.ts
-import { Routine, WorkoutSession, PersonalRecord, UserProfile } from '../../types';
+import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from '../../types';
 import { defaultRoutine, initialHistoricalSessions, initialPRs, initialGuestProfile } from './mockInitialData';
 
 const STORAGE_KEYS = {
@@ -9,6 +8,8 @@ const STORAGE_KEYS = {
   PRS: 'fitlog_prs',
   ACTIVE_SESSION: 'fitlog_active_session',
   ONBOARDING_COMPLETED: 'fitlog_onboarding_completed',
+  WEIGHT_ENTRIES: 'fitlog_weight_entries',
+  WEIGHT_GOAL: 'fitlog_weight_goal',
 };
 
 export class LocalStorageStore {
@@ -115,6 +116,54 @@ export class LocalStorageStore {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_SESSION, JSON.stringify(session));
     } else {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
+    }
+  }
+
+  getWeightEntries(): WeightEntry[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.WEIGHT_ENTRIES);
+      if (data) {
+        const entries: WeightEntry[] = JSON.parse(data);
+        return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveWeightEntry(entry: WeightEntry): void {
+    const entries = this.getWeightEntries();
+    const existingIndex = entries.findIndex((e) => e.id === entry.id);
+    if (existingIndex >= 0) {
+      entries[existingIndex] = entry;
+    } else {
+      entries.unshift(entry);
+    }
+    // Keep entries sorted descending by date
+    entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(entries));
+  }
+
+  deleteWeightEntry(entryId: string): void {
+    const entries = this.getWeightEntries().filter((e) => e.id !== entryId);
+    localStorage.setItem(STORAGE_KEYS.WEIGHT_ENTRIES, JSON.stringify(entries));
+  }
+
+  getWeightGoal(): WeightGoal | null {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.WEIGHT_GOAL);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  saveWeightGoal(goal: WeightGoal | null): void {
+    if (goal) {
+      localStorage.setItem(STORAGE_KEYS.WEIGHT_GOAL, JSON.stringify(goal));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.WEIGHT_GOAL);
     }
   }
 

@@ -1,6 +1,6 @@
 // src/services/storage/supabaseStore.ts
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Routine, WorkoutSession, PersonalRecord, UserProfile } from '../../types';
+import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry } from '../../types';
 
 export class SupabaseStore {
   async getProfile(userId: string): Promise<UserProfile | null> {
@@ -277,6 +277,50 @@ export class SupabaseStore {
       achieved_at: pr.achievedAt,
       workout_session_id: pr.workoutSessionId,
     });
+  }
+
+  async getWeightEntries(userId: string): Promise<WeightEntry[]> {
+    if (!isSupabaseConfigured || !supabase) return [];
+
+    const { data, error } = await supabase
+      .from('body_measurements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((row: any) => ({
+      id: row.id,
+      weight: Number(row.weight),
+      unit: 'kg',
+      date: row.date,
+      notes: row.notes || undefined,
+      createdAt: row.created_at || new Date().toISOString(),
+    }));
+  }
+
+  async saveWeightEntry(userId: string, entry: WeightEntry): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    await supabase.from('body_measurements').upsert({
+      id: entry.id.startsWith('weight-') ? undefined : entry.id,
+      user_id: userId,
+      date: entry.date,
+      weight: entry.weight,
+      notes: entry.notes || null,
+      created_at: entry.createdAt,
+    });
+  }
+
+  async deleteWeightEntry(userId: string, entryId: string): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    await supabase
+      .from('body_measurements')
+      .delete()
+      .eq('user_id', userId)
+      .eq('id', entryId);
   }
 }
 

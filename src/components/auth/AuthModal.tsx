@@ -43,23 +43,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
         });
 
         if (error) throw error;
 
-        if (data.user) {
+        if (data.session) {
           setMessage({
-            text: 'Account created! Please check your email for confirmation.',
+            text: 'Account created! Backing up data...',
             isError: false,
           });
 
           // Prompt migration
           setIsMigrating(true);
-          await migrateGuestDataToCloud(data.user.id, email, (status) => {
+          await migrateGuestDataToCloud(data.user!.id, email, (status) => {
             setMigrationStatus(status);
           });
           setIsMigrating(false);
           onAuthSuccess();
+        } else if (data.user) {
+          setMessage({
+            text: 'Confirmation email sent! Please check your inbox to verify your account.',
+            isError: false,
+          });
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({

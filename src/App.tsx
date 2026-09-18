@@ -65,9 +65,26 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    // Check if returning from Supabase email confirmation or auth redirect
+    if (window.location.hash.includes('access_token')) {
+      localStore.setOnboardingCompleted(true);
+      setIsOnboardingDone(true);
+      setTimeout(() => {
+        if (window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }, 500);
+    }
+  }, []);
+
+  useEffect(() => {
     loadData();
     const unsubscribe = dataRepository.subscribe(() => {
       loadData();
+      if (!dataRepository.isGuest()) {
+        localStore.setOnboardingCompleted(true);
+        setIsOnboardingDone(true);
+      }
     });
     return () => unsubscribe();
   }, [loadData]);

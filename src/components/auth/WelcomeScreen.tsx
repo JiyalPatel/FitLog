@@ -41,16 +41,27 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
         if (error) throw error;
 
-        if (data.user) {
+        if (data.session) {
           setStatusMessage({
             text: 'Account created! Signing you in...',
             isError: false,
           });
-          await migrateGuestDataToCloud(data.user.id, email);
+          await migrateGuestDataToCloud(data.user!.id, email);
           setTimeout(() => onAuthSuccess(), 800);
+        } else if (data.user) {
+          setStatusMessage({
+            text: 'Confirmation link sent! Please check your email inbox to verify your account.',
+            isError: false,
+          });
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });

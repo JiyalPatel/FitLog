@@ -30,3 +30,14 @@ export const db = app ? getFirestore(app) : null;
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Initialize analytics if supported in the browser environment
+if (typeof window !== 'undefined' && app) {
+  import('firebase/analytics').then(({ getAnalytics, isSupported }) => {
+    isSupported().then((supported) => {
+      if (supported) {
+        getAnalytics(app);
+      }
+    }).catch(() => {});
+  }).catch(() => {});
+}

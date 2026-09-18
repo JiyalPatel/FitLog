@@ -13,7 +13,7 @@ A modern, mobile-first fitness tracking web application built with a **Noir / Bl
 - **Session Score (0–100)**: Evaluates completion rate, volume overload, progression vs previous sessions, and PR bonuses.
 - **Progressive Overload Suggestions**: Rule-based intelligence analyzing consecutive sessions to recommend weight and rep progressions.
 - **Visual Analytics**: Interactive Recharts progression curves for Weight, 1RM, and Volume across `1W`, `1M`, `3M`, and `All` timeframes, plus muscle group set distribution and PR Trophy Wall.
-- **Dual-Mode (Guest + Supabase)**: Autonomous zero-setup offline usage via local storage, paired with full Supabase Auth, PostgreSQL schema, and a 1-click **Guest-to-Cloud Data Migration** tool.
+- **Dual-Mode (Guest + Firebase)**: Autonomous zero-setup offline usage via local storage, paired with 1-tap Google Sign-In, Cloud Firestore data isolation, and automatic **Guest-to-Cloud Data Migration**.
 
 ---
 
@@ -25,7 +25,7 @@ A modern, mobile-first fitness tracking web application built with a **Noir / Bl
 - **Animations**: Framer Motion & canvas-confetti
 - **Charts**: Recharts
 - **Audio**: Web Audio API Synthesizer
-- **Database & Auth**: Supabase (PostgreSQL with Row-Level Security)
+- **Database & Auth**: Firebase (Firebase Auth with Google Sign-In, Cloud Firestore, Firebase Analytics)
 - **Local Storage**: Storage repository abstraction layer with automatic reactive updates
 
 ---
@@ -50,21 +50,27 @@ npm run build
 
 ---
 
-## 🗄️ Supabase Configuration (Optional)
+## 🔥 Firebase Configuration (Optional for Cloud Sync)
 
-The app works fully offline in **Guest Mode** right out of the box. To connect Supabase for cloud sync:
+The app works fully offline in **Guest Mode** right out of the box. To connect Firebase for cloud backup and cross-device sync:
 
 1. Copy `.env.example` to `.env`:
    ```bash
    cp .env.example .env
    ```
-2. Set your Supabase project URL and anon key:
+2. Populate your Firebase web configuration values:
    ```env
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key-here
+   VITE_FIREBASE_API_KEY=your_api_key_here
+   VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
    ```
-3. Run the SQL migration located at `supabase/migrations/001_initial_schema.sql` in your Supabase SQL Editor.
-4. When you sign up or log in from the app, use the **1-Click Migration** prompt to transfer all your local guest workouts and PRs into your cloud account.
+3. Enable **Google Sign-In** under **Authentication** in your Firebase Console.
+4. Deploy the security rules defined in `firestore.rules` to your Cloud Firestore database.
+5. Signing in with Google automatically transfers all your guest workouts, routines, PRs, and body weight logs into your cloud account.
 
 ---
 

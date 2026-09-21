@@ -143,17 +143,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="text-xs text-zinc-500 font-mono">Countdown starts after each finished set</div>
           </div>
           <div className="flex items-center space-x-1 text-xs font-mono">
-            {[60, 90, 120, 180].map((sec) => (
+            {[0, 60, 90, 120, 180].map((sec) => (
               <button
                 key={sec}
                 onClick={() => onUpdateProfile({ ...profile, restTimerDefaultSeconds: sec })}
-                className={`px-2.5 py-1 rounded-lg border transition-all ${
+                className={`px-2 py-1 rounded-lg border transition-all ${
                   profile.restTimerDefaultSeconds === sec
                     ? 'bg-white text-black font-bold border-white'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'
                 }`}
               >
-                {sec}s
+                {sec === 0 ? 'Off' : `${sec}s`}
               </button>
             ))}
           </div>

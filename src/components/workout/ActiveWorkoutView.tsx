@@ -15,7 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WorkoutSession, WorkoutExerciseLog, WorkoutSet, PersonalRecord } from '../../types';
+import { WorkoutSession, WorkoutExerciseLog, WorkoutSet, PersonalRecord, UserProfile } from '../../types';
 import { evaluateSetForPR, getHistoricalMaxWeight } from '../../services/engine/prEngine';
 import { getPreviousExerciseSets } from '../../services/engine/rollingQueue';
 import { soundEffects } from '../../services/audio/soundEffects';
@@ -27,6 +27,7 @@ interface ActiveWorkoutViewProps {
   session: WorkoutSession;
   previousSessions: WorkoutSession[];
   prs: PersonalRecord[];
+  profile?: UserProfile;
   onUpdateSession: (session: WorkoutSession) => void;
   onFinishWorkout: () => void;
   onCancelWorkout: () => void;
@@ -36,6 +37,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
   session,
   previousSessions,
   prs,
+  profile,
   onUpdateSession,
   onFinishWorkout,
   onCancelWorkout,
@@ -44,12 +46,13 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(session.durationSeconds || 0);
 
   // Rest Timer State
+  const defaultRestSeconds = profile?.restTimerDefaultSeconds ?? 90;
   const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null);
-  const [restTimerTotal, setRestTimerTotal] = useState<number>(90);
+  const [restTimerTotal, setRestTimerTotal] = useState<number>(defaultRestSeconds > 0 ? defaultRestSeconds : 90);
   const [isRestTimerPaused, setIsRestTimerPaused] = useState<boolean>(false);
 
   // Sound enabled state
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(profile?.soundEnabled ?? true);
 
   // Recent PR Alert state
   const [newPRAlert, setNewPRAlert] = useState<{ exercise: string; details: string } | null>(null);
@@ -163,10 +166,12 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
         targetSet.isPR = false;
       }
 
-      // Trigger Rest Timer
-      setRestTimerTotal(90);
-      setRestTimerSeconds(90);
-      setIsRestTimerPaused(false);
+      // Trigger Rest Timer (only if rest interval is enabled, i.e. > 0)
+      if (defaultRestSeconds > 0) {
+        setRestTimerTotal(defaultRestSeconds);
+        setRestTimerSeconds(defaultRestSeconds);
+        setIsRestTimerPaused(false);
+      }
     } else {
       targetSet.isPR = false;
       if (session.prsAchieved) {

@@ -12,7 +12,8 @@ import { ProfileView } from './components/profile/ProfileView';
 import { WeightTrackerView } from './components/weight/WeightTrackerView';
 import { LogWeightModal } from './components/weight/LogWeightModal';
 import { AuthModal } from './components/auth/AuthModal';
-import { WelcomeScreen } from './components/auth/WelcomeScreen';
+import { WelcomeScreen, OnboardingData } from './components/auth/WelcomeScreen';
+import { createRoutineFromSplit } from './services/data/onboardingPresets';
 
 import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from './types';
 import { dataRepository } from './services/storage/dataRepository';
@@ -238,19 +239,86 @@ export function App() {
     setWeightGoal(goal);
   };
 
-  // If user hasn't chosen a mode yet, show Welcome / Login screen
+  const handleCompleteOnboarding = async (data: OnboardingData) => {
+    // 1. Build and save profile
+    const currentP = profile || initialGuestProfile;
+    const updatedProfile: UserProfile = {
+      ...currentP,
+      displayName: data.displayName,
+      isGuest: data.accountMode === 'guest',
+      weightUnit: data.weightUnit,
+      restTimerDefaultSeconds: data.restTimerSeconds,
+      soundEnabled: true,
+    };
+    await dataRepository.saveProfile(updatedProfile);
+    setProfile(updatedProfile);
+
+    // 2. Build and save custom or preset routine
+    const newRoutine = createRoutineFromSplit(data.splitId, data.targetDaysPerWeek);
+    await dataRepository.saveRoutine(newRoutine);
+    setRoutine(newRoutine);
+
+    // 3. Save initial weight entry and goal if specified
+    if (data.currentWeight && data.currentWeight > 0) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
+
+      const initialEntry: WeightEntry = {
+        id: `weight-${Date.now()}`,
+        weight: data.currentWeight,
+        unit: data.weightUnit,
+        date: dateKey,
+        notes: 'Initial setup check-in',
+        createdAt: now.toISOString(),
+      };
+      await dataRepository.saveWeightEntry(initialEntry);
+      setWeightEntries([initialEntry]);
+
+      if (data.goalType && data.targetWeight) {
+        const goal: WeightGoal = {
+          startWeight: data.currentWeight,
+          targetWeight: data.targetWeight,
+          goalType: data.goalType,
+        };
+        await dataRepository.saveWeightGoal(goal);
+        setWeightGoal(goal);
+      }
+    }
+
+    localStore.setOnboardingCompleted(true);
+    setIsOnboardingDone(true);
+    await loadData();
+  };
+
+  const handleSkipToDefaults = async (isGoogleUser: boolean) => {
+    const currentP = profile || initialGuestProfile;
+    const updatedProfile: UserProfile = {
+      ...currentP,
+      isGuest: !isGoogleUser,
+      weightUnit: 'kg',
+      restTimerDefaultSeconds: 90,
+      soundEnabled: true,
+    };
+    await dataRepository.saveProfile(updatedProfile);
+    setProfile(updatedProfile);
+
+    await dataRepository.saveRoutine(defaultRoutine);
+    setRoutine(defaultRoutine);
+
+    localStore.setOnboardingCompleted(true);
+    setIsOnboardingDone(true);
+    await loadData();
+  };
+
+  // If user hasn't chosen a mode yet, show Welcome / Setup wizard
   if (!isOnboardingDone) {
     return (
       <WelcomeScreen
-        onContinueAsGuest={() => {
-          localStore.setOnboardingCompleted(true);
-          setIsOnboardingDone(true);
-        }}
-        onAuthSuccess={() => {
-          localStore.setOnboardingCompleted(true);
-          setIsOnboardingDone(true);
-          loadData();
-        }}
+        onCompleteOnboarding={handleCompleteOnboarding}
+        onSkipToDefaults={handleSkipToDefaults}
       />
     );
   }
@@ -294,6 +362,7 @@ export function App() {
               session={activeSession}
               previousSessions={sessions}
               prs={prs}
+              profile={profile}
               onUpdateSession={handleUpdateActiveSession}
               onFinishWorkout={handleFinishWorkout}
               onCancelWorkout={handleCancelWorkout}

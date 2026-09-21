@@ -89,26 +89,40 @@ export function calculateWorkoutScore(
 }
 
 /**
- * Calculates weekly summary stats and consistency
+ * Calculates weekly summary stats and consistency based on calendar weeks starting on Monday.
+ * Monday 00:00:00 to Sunday 23:59:59.999 is one calendar week.
  */
 export function calculateWeeklyStats(
   sessions: WorkoutSession[],
-  targetPerWeek = 5
+  targetPerWeek = 5,
+  referenceDate: Date = new Date()
 ): WeeklySummaryStats {
-  const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const ref = new Date(referenceDate);
+  const day = ref.getDay();
+  // Monday is 1, Sunday is 0 -> (day + 6) % 7 gives days elapsed since this week's Monday
+  const daysSinceMonday = (day + 6) % 7;
 
-  const thisWeekSessions = sessions.filter(
-    (s) => s.completedAt && new Date(s.completedAt) >= oneWeekAgo
-  );
+  // Start of this week: Monday 00:00:00.000
+  const startOfThisWeek = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - daysSinceMonday, 0, 0, 0, 0);
+  // End of this week: Sunday 23:59:59.999
+  const endOfThisWeek = new Date(startOfThisWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
 
-  const prevWeekSessions = sessions.filter(
-    (s) =>
-      s.completedAt &&
-      new Date(s.completedAt) >= twoWeeksAgo &&
-      new Date(s.completedAt) < oneWeekAgo
-  );
+  // Start of previous week: Previous Monday 00:00:00.000
+  const startOfPrevWeek = new Date(startOfThisWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // End of previous week: Previous Sunday 23:59:59.999
+  const endOfPrevWeek = new Date(startOfThisWeek.getTime() - 1);
+
+  const thisWeekSessions = sessions.filter((s) => {
+    if (!s.completedAt) return false;
+    const time = new Date(s.completedAt).getTime();
+    return time >= startOfThisWeek.getTime() && time <= endOfThisWeek.getTime();
+  });
+
+  const prevWeekSessions = sessions.filter((s) => {
+    if (!s.completedAt) return false;
+    const time = new Date(s.completedAt).getTime();
+    return time >= startOfPrevWeek.getTime() && time <= endOfPrevWeek.getTime();
+  });
 
   const thisWeekVolume = thisWeekSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
   const prevWeekVolume = prevWeekSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
@@ -137,7 +151,7 @@ export function calculateWeeklyStats(
   const consistencyPercentage = Math.min(100, Math.round((workoutsCompleted / targetPerWeek) * 100));
 
   return {
-    weekNumber: getWeekNumber(now),
+    weekNumber: getWeekNumber(ref),
     workoutsCompleted,
     targetWorkouts: targetPerWeek,
     consistencyPercentage,
@@ -292,8 +306,10 @@ export function calculateBestImprovement(
   );
 }
 
-function getWeekNumber(date: Date): number {
-  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+export function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }

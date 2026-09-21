@@ -201,10 +201,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-white">
-              {streak} <span className="text-xs font-normal text-zinc-400">sessions</span>
+              {streak} <span className="text-xs font-normal text-zinc-400">{streak === 1 ? 'day' : 'days'}</span>
             </div>
             <p className="text-[11px] text-zinc-500 mt-0.5">
-              {streak > 0 ? 'Consistent momentum' : 'Ready to begin'}
+              {streak > 0 ? `${streak} day${streak === 1 ? '' : 's'} in a row` : 'Ready to begin'}
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 // src/services/engine/rollingQueue.ts
-import { Routine, RoutineDay, QueueItem, WorkoutSession } from '../../types';
+import { Routine, RoutineDay, QueueItem, WorkoutSession, WorkoutSet } from '../../types';
 
 /**
  * Formats a Date or ISO string to local date key 'YYYY-MM-DD'
@@ -128,4 +128,47 @@ export function calculateWorkoutStreak(
   }
 
   return streak;
+}
+
+/**
+ * Finds the most recent completed sets for a given exercise from previous workout sessions.
+ * Returns an array of WorkoutSet or null if no previous history is found.
+ */
+export function getPreviousExerciseSets(
+  exerciseName: string,
+  previousSessions: WorkoutSession[]
+): WorkoutSet[] | null {
+  if (!previousSessions || previousSessions.length === 0) return null;
+
+  const targetName = exerciseName.trim().toLowerCase();
+
+  // Sort descending by completion/start time so most recent session is first
+  const sorted = [...previousSessions]
+    .filter((s) => s.status === 'completed' && s.exercises && s.exercises.length > 0)
+    .sort(
+      (a, b) =>
+        new Date(b.completedAt || b.startedAt).getTime() -
+        new Date(a.completedAt || a.startedAt).getTime()
+    );
+
+  for (const session of sorted) {
+    const matchingExercise = session.exercises.find(
+      (ex) => ex.exerciseName.trim().toLowerCase() === targetName
+    );
+
+    if (matchingExercise && matchingExercise.sets && matchingExercise.sets.length > 0) {
+      // Prioritize completed sets with weight > 0
+      const completedSets = matchingExercise.sets.filter((s) => s.isCompleted && s.weight > 0);
+      if (completedSets.length > 0) {
+        return completedSets;
+      }
+      const validSets = matchingExercise.sets.filter((s) => s.weight > 0);
+      if (validSets.length > 0) {
+        return validSets;
+      }
+      return matchingExercise.sets;
+    }
+  }
+
+  return null;
 }

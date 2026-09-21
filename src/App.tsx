@@ -17,7 +17,7 @@ import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from './types';
 import { dataRepository } from './services/storage/dataRepository';
 import { localStore } from './services/storage/localStorageStore';
-import { calculateWorkoutStreak } from './services/engine/rollingQueue';
+import { calculateWorkoutStreak, getPreviousExerciseSets } from './services/engine/rollingQueue';
 import { calculateWeeklyStats } from './services/engine/scoringEngine';
 import { generateOverloadTips } from './services/engine/overloadEngine';
 import { defaultRoutine, initialGuestProfile } from './services/storage/mockInitialData';
@@ -103,14 +103,18 @@ export function App() {
       status: 'in_progress',
       prsAchieved: [],
       exercises: targetDay.exercises.map((ex) => {
-        // Pre-fill sets based on target sets
+        // Query previous completed sets for this exercise
+        const prevSets = getPreviousExerciseSets(ex.name, sessions);
+
+        // Pre-fill sets based on target sets and previous performance
         const sets = [];
         for (let i = 1; i <= ex.targetSets; i++) {
+          const prevSet = prevSets ? (prevSets[i - 1] || prevSets[prevSets.length - 1]) : null;
           sets.push({
             id: `s-${Date.now()}-${ex.id}-${i}`,
             setNumber: i,
-            weight: 20,
-            reps: ex.targetRepsMin || 10,
+            weight: prevSet?.weight ?? 20,
+            reps: prevSet?.reps ?? (ex.targetRepsMin || 10),
             isCompleted: false,
           });
         }

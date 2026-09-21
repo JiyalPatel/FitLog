@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { WorkoutSession, WorkoutExerciseLog, WorkoutSet, PersonalRecord } from '../../types';
 import { evaluateSetForPR, getHistoricalMaxWeight } from '../../services/engine/prEngine';
+import { getPreviousExerciseSets } from '../../services/engine/rollingQueue';
 import { soundEffects } from '../../services/audio/soundEffects';
 import { ExercisePickerModal } from '../common/ExercisePickerModal';
 import { ConfirmDialogModal } from '../common/ConfirmDialogModal';
@@ -260,11 +261,24 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
 
     const updatedExercises = [...session.exercises];
     const oldName = updatedExercises[swapExerciseIdx].exerciseName;
+    const prevSets = getPreviousExerciseSets(newEx.name, previousSessions);
+
+    // Adapt existing uncompleted sets to swapped exercise's previous weights/reps
+    const updatedSets = updatedExercises[swapExerciseIdx].sets.map((set, idx) => {
+      if (set.isCompleted) return set;
+      const prevSet = prevSets ? (prevSets[idx] || prevSets[prevSets.length - 1]) : null;
+      return {
+        ...set,
+        weight: prevSet?.weight ?? 20,
+        reps: prevSet?.reps ?? newEx.defaultRepsMin,
+      };
+    });
 
     updatedExercises[swapExerciseIdx] = {
       ...updatedExercises[swapExerciseIdx],
       exerciseName: newEx.name,
       muscleGroup: newEx.muscleGroup,
+      sets: updatedSets,
     };
 
     onUpdateSession({ ...session, exercises: updatedExercises });
@@ -275,13 +289,15 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
 
   // Add Bonus Exercise for Today
   const handleAddExerciseToToday = (exercise: StandardExercise) => {
+    const prevSets = getPreviousExerciseSets(exercise.name, previousSessions);
     const sets: WorkoutSet[] = [];
     for (let i = 1; i <= exercise.defaultSets; i++) {
+      const prevSet = prevSets ? (prevSets[i - 1] || prevSets[prevSets.length - 1]) : null;
       sets.push({
         id: `s-${Date.now()}-${i}`,
         setNumber: i,
-        weight: 20,
-        reps: exercise.defaultRepsMin,
+        weight: prevSet?.weight ?? 20,
+        reps: prevSet?.reps ?? exercise.defaultRepsMin,
         isCompleted: false,
       });
     }

@@ -117,17 +117,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     runningVolume += dayVol;
 
     const isToday = now.toDateString() === dayDate.toDateString();
+    const isFuture = dayDate > now && !isToday;
     const isPast = dayDate <= now;
 
     return {
       day: name,
       dateLabel: dayDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      volume: dayVol,
-      cumulativeVolume: runningVolume,
+      volume: isFuture ? null : dayVol,
+      rawVolume: dayVol,
+      cumulativeVolume: isFuture ? null : runningVolume,
       workouts: matchingSessions.length,
       sessionNames: matchingSessions.map((s) => s.name).join(', '),
       isToday,
       isPast,
+      isFuture,
     };
   });
 
@@ -351,43 +354,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 2.2 Weekly Performance Volume Line Graph Card */}
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3.5 shadow-xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-white" />
-                OVERALL PERFORMANCE · VOLUME
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3 shadow-xl">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 min-w-0">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 whitespace-nowrap">
+              <Activity className="w-3.5 h-3.5 text-white" />
+              WEEKLY VOLUME
+            </span>
+            {volumeChangePercent > 0 ? (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-white border border-zinc-800 flex items-center gap-1 font-bold shrink-0">
+                <TrendingUp className="w-3 h-3 text-white" /> +{volumeChangePercent}%
               </span>
-              {volumeChangePercent > 0 ? (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-white border border-zinc-800 flex items-center gap-1 font-bold">
-                  <TrendingUp className="w-3 h-3 text-white" /> +{volumeChangePercent}%
-                </span>
-              ) : volumeChangePercent < 0 ? (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-1">
-                  <TrendingDown className="w-3 h-3 text-zinc-400" /> {volumeChangePercent}%
-                </span>
-              ) : null}
-            </div>
-            <div className="flex items-baseline space-x-2 mt-1">
-              <span className="text-2xl font-bold font-mono text-white">
-                {thisWeekTotalVolume.toLocaleString()}
+            ) : volumeChangePercent < 0 ? (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-1 shrink-0">
+                <TrendingDown className="w-3 h-3 text-zinc-400" /> {volumeChangePercent}%
               </span>
-              <span className="text-xs font-mono text-zinc-400 uppercase font-semibold">
-                {weightUnit} this week
-              </span>
-            </div>
-            <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
-              {workoutsThisWeek} workout{workoutsThisWeek === 1 ? '' : 's'} logged · Last week: {lastWeekTotalVolume.toLocaleString()} {weightUnit}
-            </p>
+            ) : null}
           </div>
 
-          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono">
+          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono shrink-0">
             <button
               onClick={() => setHomeVolumeMode('daily')}
-              className={`px-2 py-1 rounded transition-colors ${
+              className={`px-2.5 py-1 rounded transition-colors whitespace-nowrap ${
                 homeVolumeMode === 'daily'
-                  ? 'bg-white text-black font-bold'
+                  ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -395,15 +385,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
             <button
               onClick={() => setHomeVolumeMode('trend')}
-              className={`px-2 py-1 rounded transition-colors ${
+              className={`px-2.5 py-1 rounded transition-colors whitespace-nowrap ${
                 homeVolumeMode === 'trend'
-                  ? 'bg-white text-black font-bold'
+                  ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
               6-Wk Trend
             </button>
           </div>
+        </div>
+
+        <div>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-2xl font-bold font-mono text-white">
+              {thisWeekTotalVolume.toLocaleString()}
+            </span>
+            <span className="text-xs font-mono text-zinc-400 uppercase font-semibold">
+              {weightUnit} this week
+            </span>
+          </div>
+          <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
+            {workoutsThisWeek} workout{workoutsThisWeek === 1 ? '' : 's'} logged · Last week: {lastWeekTotalVolume.toLocaleString()} {weightUnit}
+          </p>
         </div>
 
         {/* Line Chart */}
@@ -435,6 +439,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
+                      if (data.isFuture) {
+                        return (
+                          <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 shadow-xl font-mono text-xs text-white space-y-1">
+                            <div className="font-bold flex items-center justify-between gap-3 text-zinc-400">
+                              <span>
+                                {data.day} ({data.dateLabel})
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-bold">
+                                UPCOMING
+                              </span>
+                            </div>
+                            <div className="text-zinc-500 text-[11px] pt-0.5">
+                              Upcoming Day
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 shadow-xl font-mono text-xs text-white space-y-1">
                           <div className="font-bold flex items-center justify-between gap-3">
@@ -458,7 +479,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             </div>
                           )}
                           <div className="text-[9px] text-zinc-500 pt-0.5 border-t border-zinc-900">
-                            Cumulative: {data.cumulativeVolume.toLocaleString()} {weightUnit}
+                            Cumulative: {data.cumulativeVolume?.toLocaleString() || '0'} {weightUnit}
                           </div>
                         </div>
                       );
@@ -473,7 +494,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#homeVolumeGrad)"
-                  dot={{ fill: '#ffffff', strokeWidth: 1.5, r: 3 }}
+                  connectNulls={false}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (!payload || payload.isFuture || payload.volume === null) return null;
+                    if (payload.volume === 0) {
+                      return <circle key={`dot-h-${props.index}`} cx={cx} cy={cy} r={2} fill="#3f3f46" />;
+                    }
+                    return <circle key={`dot-h-${props.index}`} cx={cx} cy={cy} r={3.5} fill="#ffffff" stroke="#000000" strokeWidth={1.5} />;
+                  }}
                   activeDot={{ r: 5, fill: '#ffffff', stroke: '#000000', strokeWidth: 2 }}
                 />
               </AreaChart>

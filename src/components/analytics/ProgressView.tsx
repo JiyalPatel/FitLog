@@ -213,14 +213,20 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         const dayVol = matchingSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
         runningVolume += dayVol;
 
+        const isToday = now.toDateString() === dayDate.toDateString();
+        const isFuture = isCurrent && dayDate > now && !isToday;
+
         return {
           dayIndex: dayIdx,
           dayName: name,
           dateLabel: dayDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-          volume: dayVol,
-          cumulativeVolume: runningVolume,
+          volume: isFuture ? null : dayVol,
+          rawVolume: dayVol,
+          cumulativeVolume: isFuture ? null : runningVolume,
           workoutsCount: matchingSessions.length,
           sessionNames: matchingSessions.map((s) => s.name),
+          isToday,
+          isFuture,
         };
       });
 
@@ -269,23 +275,27 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
     return dayNames.map((name, idx) => {
       const ptA = weekA.dailyPoints[idx];
       const ptB = weekB.dailyPoints[idx];
+      const isFutureA = !!ptA.isFuture;
+      const isFutureB = !!ptB.isFuture;
       return {
         day: name,
         weekADate: ptA.dateLabel,
         weekBDate: ptB.dateLabel,
         // Daily volume
-        volumeA: ptA.volume,
-        volumeB: ptB.volume,
+        volumeA: isFutureA ? null : ptA.volume,
+        volumeB: isFutureB ? null : ptB.volume,
         // Cumulative volume
-        cumVolumeA: ptA.cumulativeVolume,
-        cumVolumeB: ptB.cumulativeVolume,
+        cumVolumeA: isFutureA ? null : ptA.cumulativeVolume,
+        cumVolumeB: isFutureB ? null : ptB.cumulativeVolume,
         // Details
         sessionNamesA: ptA.sessionNames.length > 0 ? ptA.sessionNames.join(', ') : 'Rest Day',
         sessionNamesB: ptB.sessionNames.length > 0 ? ptB.sessionNames.join(', ') : 'Rest Day',
         workoutsA: ptA.workoutsCount,
         workoutsB: ptB.workoutsCount,
-        delta: ptA.volume - ptB.volume,
-        cumDelta: ptA.cumulativeVolume - ptB.cumulativeVolume,
+        delta: (ptA.volume || 0) - (ptB.volume || 0),
+        cumDelta: (ptA.cumulativeVolume || 0) - (ptB.cumulativeVolume || 0),
+        isFutureA,
+        isFutureB,
       };
     });
   }, [weekA, weekB]);
@@ -355,20 +365,20 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
       <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-4 shadow-xl">
         {/* Comparator Header & Week Selector */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-white" />
-              WEEKLY FULL VOLUME COMPARATOR
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 whitespace-nowrap min-w-0">
+              <Activity className="w-3.5 h-3.5 text-white shrink-0" />
+              <span className="truncate">VOLUME COMPARATOR</span>
             </span>
 
             {/* Quick Presets */}
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1 shrink-0">
               <button
                 onClick={() => {
                   setSelectedWeekIndexA(0);
                   setSelectedWeekIndexB(1);
                 }}
-                className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors whitespace-nowrap ${
                   selectedWeekIndexA === 0 && selectedWeekIndexB === 1
                     ? 'bg-white text-black border-white font-bold'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
@@ -381,7 +391,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   setSelectedWeekIndexA(0);
                   setSelectedWeekIndexB(2);
                 }}
-                className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors whitespace-nowrap ${
                   selectedWeekIndexA === 0 && selectedWeekIndexB === 2
                     ? 'bg-white text-black border-white font-bold'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
@@ -393,11 +403,11 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
           </div>
 
           {/* Week Selectors Row */}
-          <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-zinc-900/60 border border-zinc-850">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-850">
             {/* Week A (Primary) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 flex items-center gap-1">
+                <span className="text-[10px] font-mono uppercase text-zinc-400 flex items-center gap-1 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-white inline-block shadow-glow-sm" />
                   Primary Week
                 </span>
@@ -419,7 +429,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
             {/* Week B (Comparison) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 flex items-center gap-1">
+                <span className="text-[10px] font-mono uppercase text-zinc-400 flex items-center gap-1 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-zinc-500 inline-block" />
                   Compare Against
                 </span>
@@ -443,38 +453,38 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         {/* Head-to-Head Comparison Scorecard */}
         <div className="grid grid-cols-2 gap-2.5">
           {/* Total Full Volume Comparison */}
-          <div className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-850 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Total Volume</span>
+          <div className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-850 space-y-1.5 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 truncate">Total Volume</span>
               {volumeDeltaPercent > 0 ? (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-white border border-zinc-700 font-bold flex items-center gap-0.5">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-white border border-zinc-700 font-bold flex items-center gap-0.5 shrink-0">
                   <TrendingUp className="w-3 h-3 text-white" /> +{volumeDeltaPercent}%
                 </span>
               ) : volumeDeltaPercent < 0 ? (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-0.5">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-0.5 shrink-0">
                   <TrendingDown className="w-3 h-3 text-zinc-400" /> {volumeDeltaPercent}%
                 </span>
               ) : (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800 shrink-0">
                   Equal
                 </span>
               )}
             </div>
 
-            <div className="flex items-baseline justify-between pt-0.5">
-              <div>
+            <div>
+              <div className="flex items-baseline space-x-1">
                 <span className="text-xl font-bold font-mono text-white">
                   {weekA.totalVolume.toLocaleString()}
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400 ml-1">{weightUnit}</span>
+                <span className="text-[10px] font-mono text-zinc-400">{weightUnit}</span>
               </div>
-              <div className="text-right font-mono text-xs text-zinc-400">
+              <div className="text-[10px] font-mono text-zinc-400 truncate mt-0.5">
                 vs {weekB.totalVolume.toLocaleString()} {weightUnit}
               </div>
             </div>
 
             {/* Visual Balance Bar */}
-            <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden flex">
+            <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden flex mt-2">
               <div
                 className="bg-white h-full transition-all duration-500"
                 style={{
@@ -509,50 +519,52 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
               />
             </div>
             <div className="flex justify-between text-[9px] font-mono text-zinc-500">
-              <span>{weekA.shortLabel}: {volumeDelta >= 0 ? `+${volumeDelta.toLocaleString()}` : `${volumeDelta.toLocaleString()}`} {weightUnit}</span>
-              <span>{weekB.shortLabel}</span>
+              <span className="truncate">{weekA.shortLabel}: {volumeDelta >= 0 ? `+${volumeDelta.toLocaleString()}` : `${volumeDelta.toLocaleString()}`}</span>
+              <span className="shrink-0 ml-1">{weekB.shortLabel}</span>
             </div>
           </div>
 
           {/* Workouts & Consistency */}
-          <div className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-850 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Workouts</span>
-              <span className="text-[10px] font-mono text-zinc-400">
-                {workoutsDelta > 0 ? `+${workoutsDelta} vs ${weekB.shortLabel}` : workoutsDelta < 0 ? `${workoutsDelta} vs ${weekB.shortLabel}` : 'Matched'}
+          <div className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-850 space-y-1.5 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 truncate">Workouts</span>
+              <span className="text-[10px] font-mono text-zinc-400 truncate shrink-0">
+                {workoutsDelta > 0 ? `+${workoutsDelta}` : workoutsDelta < 0 ? `${workoutsDelta}` : 'Matched'}
               </span>
             </div>
-            <div className="flex items-baseline justify-between pt-0.5">
-              <div>
+            <div>
+              <div className="flex items-baseline space-x-1">
                 <span className="text-xl font-bold font-mono text-white">
                   {weekA.workoutsCount}
                 </span>
-                <span className="text-[10px] font-mono text-zinc-400 ml-1">sessions</span>
+                <span className="text-[10px] font-mono text-zinc-400">sessions</span>
               </div>
-              <div className="text-right font-mono text-xs text-zinc-400">
+              <div className="text-[10px] font-mono text-zinc-400 truncate mt-0.5">
                 vs {weekB.workoutsCount} sessions
               </div>
             </div>
-            <p className="text-[10px] font-mono text-zinc-500 pt-1">
+            <p className="text-[10px] font-mono text-zinc-500 pt-1 border-t border-zinc-900/80 truncate">
               Sets: <span className="text-zinc-300 font-bold">{weekA.totalSets}</span> vs <span className="text-zinc-400">{weekB.totalSets}</span> ({setsDelta >= 0 ? `+${setsDelta}` : setsDelta})
             </p>
           </div>
         </div>
 
         {/* Graph Mode Navigation Tabs */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="text-xs font-semibold text-white">
-            {comparisonGraphMode === 'daily' && 'Day-by-Day Volume Overlay'}
-            {comparisonGraphMode === 'cumulative' && 'Weekly Cumulative Load Curve'}
-            {comparisonGraphMode === 'history' && '6-Week Volume Trajectory'}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-white">
+              {comparisonGraphMode === 'daily' && 'Day-by-Day Volume Overlay'}
+              {comparisonGraphMode === 'cumulative' && 'Weekly Cumulative Load Curve'}
+              {comparisonGraphMode === 'history' && '6-Week Volume Trajectory'}
+            </div>
           </div>
 
-          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono">
+          <div className="grid grid-cols-3 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-[11px] font-mono gap-1">
             <button
               onClick={() => setComparisonGraphMode('daily')}
-              className={`px-2 py-1 rounded transition-colors ${
+              className={`py-1.5 px-2 rounded-lg text-center transition-colors whitespace-nowrap font-medium ${
                 comparisonGraphMode === 'daily'
-                  ? 'bg-white text-black font-bold'
+                  ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -560,9 +572,9 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
             </button>
             <button
               onClick={() => setComparisonGraphMode('cumulative')}
-              className={`px-2 py-1 rounded transition-colors ${
+              className={`py-1.5 px-2 rounded-lg text-center transition-colors whitespace-nowrap font-medium ${
                 comparisonGraphMode === 'cumulative'
-                  ? 'bg-white text-black font-bold'
+                  ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -570,9 +582,9 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
             </button>
             <button
               onClick={() => setComparisonGraphMode('history')}
-              className={`px-2 py-1 rounded transition-colors ${
+              className={`py-1.5 px-2 rounded-lg text-center transition-colors whitespace-nowrap font-medium ${
                 comparisonGraphMode === 'history'
-                  ? 'bg-white text-black font-bold'
+                  ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -604,7 +616,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
-                      const diff = data.volumeA - data.volumeB;
+                      const diff = data.delta;
                       return (
                         <div className="p-3 rounded-xl bg-zinc-950/95 border border-zinc-800 shadow-2xl font-mono text-xs space-y-1.5 backdrop-blur-md">
                           <div className="font-bold text-white flex items-center justify-between border-b border-zinc-800/80 pb-1">
@@ -618,11 +630,17 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                               <span className="w-2 h-2 rounded-full bg-white inline-block" />
                               {weekA.label}:
                             </span>
-                            <span className="font-bold">{data.volumeA.toLocaleString()} {weightUnit}</span>
+                            <span className="font-bold">
+                              {data.isFutureA
+                                ? 'Upcoming'
+                                : `${data.volumeA?.toLocaleString() || 0} ${weightUnit}`}
+                            </span>
                           </div>
-                          <div className="text-[10px] text-zinc-400 pl-3.5">
-                            {data.sessionNamesA}
-                          </div>
+                          {!data.isFutureA && data.sessionNamesA && (
+                            <div className="text-[10px] text-zinc-400 pl-3.5">
+                              {data.sessionNamesA}
+                            </div>
+                          )}
 
                           {/* Week B */}
                           <div className="flex items-center justify-between gap-3 text-zinc-400 pt-0.5">
@@ -630,19 +648,23 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                               <span className="w-2 h-2 rounded-full bg-zinc-500 inline-block" />
                               {weekB.label}:
                             </span>
-                            <span>{data.volumeB.toLocaleString()} {weightUnit}</span>
+                            <span>{data.volumeB?.toLocaleString() || 0} {weightUnit}</span>
                           </div>
-                          <div className="text-[10px] text-zinc-500 pl-3.5">
-                            {data.sessionNamesB}
-                          </div>
+                          {data.sessionNamesB && (
+                            <div className="text-[10px] text-zinc-500 pl-3.5">
+                              {data.sessionNamesB}
+                            </div>
+                          )}
 
                           {/* Daily Delta */}
-                          <div className="pt-1 border-t border-zinc-850 flex items-center justify-between text-[11px]">
-                            <span className="text-zinc-500">Day Difference:</span>
-                            <span className={`font-bold ${diff > 0 ? 'text-white' : diff < 0 ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                              {diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()} {weightUnit}
-                            </span>
-                          </div>
+                          {!data.isFutureA && (
+                            <div className="pt-1 border-t border-zinc-850 flex items-center justify-between text-[11px]">
+                              <span className="text-zinc-500">Day Difference:</span>
+                              <span className={`font-bold ${diff > 0 ? 'text-white' : diff < 0 ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                                {diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()} {weightUnit}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     }
@@ -656,7 +678,15 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   name={weekA.label}
                   stroke="#ffffff"
                   strokeWidth={2.5}
-                  dot={{ fill: '#ffffff', strokeWidth: 2, r: 3.5 }}
+                  connectNulls={false}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (!payload || payload.isFutureA || payload.volumeA === null) return null;
+                    if (payload.volumeA === 0) {
+                      return <circle key={`dot-a-${props.index}`} cx={cx} cy={cy} r={2} fill="#3f3f46" />;
+                    }
+                    return <circle key={`dot-a-${props.index}`} cx={cx} cy={cy} r={3.5} fill="#ffffff" stroke="#000000" strokeWidth={1.5} />;
+                  }}
                   activeDot={{ r: 6, fill: '#ffffff', stroke: '#000000', strokeWidth: 2 }}
                 />
                 {/* Comparison Week Line */}
@@ -667,7 +697,15 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   stroke="#71717a"
                   strokeWidth={2}
                   strokeDasharray="4 4"
-                  dot={{ fill: '#71717a', strokeWidth: 2, r: 3 }}
+                  connectNulls={false}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (!payload || payload.volumeB === null) return null;
+                    if (payload.volumeB === 0) {
+                      return <circle key={`dot-b-${props.index}`} cx={cx} cy={cy} r={2} fill="#27272a" />;
+                    }
+                    return <circle key={`dot-b-${props.index}`} cx={cx} cy={cy} r={3} fill="#71717a" />;
+                  }}
                   activeDot={{ r: 5, fill: '#71717a', stroke: '#000000', strokeWidth: 2 }}
                 />
               </LineChart>
@@ -701,7 +739,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
-                      const cumDiff = data.cumVolumeA - data.cumVolumeB;
+                      const cumDiff = (data.cumVolumeA || 0) - (data.cumVolumeB || 0);
                       return (
                         <div className="p-3 rounded-xl bg-zinc-950/95 border border-zinc-800 shadow-2xl font-mono text-xs space-y-1.5 backdrop-blur-md">
                           <div className="font-bold text-white flex items-center justify-between border-b border-zinc-800/80 pb-1">
@@ -712,21 +750,27 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                               <span className="w-2 h-2 rounded-full bg-white inline-block" />
                               {weekA.label}:
                             </span>
-                            <span className="font-bold">{data.cumVolumeA.toLocaleString()} {weightUnit}</span>
+                            <span className="font-bold">
+                              {data.isFutureA
+                                ? 'Upcoming'
+                                : `${data.cumVolumeA?.toLocaleString() || 0} ${weightUnit}`}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between gap-3 text-zinc-400">
                             <span className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-zinc-500 inline-block" />
                               {weekB.label}:
                             </span>
-                            <span>{data.cumVolumeB.toLocaleString()} {weightUnit}</span>
+                            <span>{data.cumVolumeB?.toLocaleString() || 0} {weightUnit}</span>
                           </div>
-                          <div className="pt-1 border-t border-zinc-850 flex items-center justify-between text-[11px]">
-                            <span className="text-zinc-500">Cumulative Lead:</span>
-                            <span className={`font-bold ${cumDiff >= 0 ? 'text-white' : 'text-zinc-400'}`}>
-                              {cumDiff >= 0 ? `+${cumDiff.toLocaleString()}` : cumDiff.toLocaleString()} {weightUnit}
-                            </span>
-                          </div>
+                          {!data.isFutureA && (
+                            <div className="pt-1 border-t border-zinc-850 flex items-center justify-between text-[11px]">
+                              <span className="text-zinc-500">Cumulative Lead:</span>
+                              <span className={`font-bold ${cumDiff >= 0 ? 'text-white' : 'text-zinc-400'}`}>
+                                {cumDiff >= 0 ? `+${cumDiff.toLocaleString()}` : cumDiff.toLocaleString()} {weightUnit}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     }
@@ -740,7 +784,12 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   stroke="#ffffff"
                   strokeWidth={2.5}
                   fill="url(#cumVolumeGradA)"
-                  dot={{ fill: '#ffffff', strokeWidth: 2, r: 3.5 }}
+                  connectNulls={false}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (!payload || payload.isFutureA || payload.cumVolumeA === null) return null;
+                    return <circle key={`dot-ca-${props.index}`} cx={cx} cy={cy} r={3.5} fill="#ffffff" stroke="#000000" strokeWidth={1.5} />;
+                  }}
                 />
                 <Line
                   type="monotone"
@@ -859,21 +908,31 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                     <div>
                       <div className="text-[11px] text-zinc-400">
                         <span className="text-white font-semibold">
-                          {row.volumeA > 0 ? `${row.volumeA.toLocaleString()} ${weightUnit}` : 'Rest'}
+                          {row.isFutureA
+                            ? 'Upcoming'
+                            : (row.volumeA && row.volumeA > 0)
+                            ? `${row.volumeA.toLocaleString()} ${weightUnit}`
+                            : 'Rest'}
                         </span>
-                        {row.volumeA > 0 && (
+                        {!row.isFutureA && row.volumeA && row.volumeA > 0 ? (
                           <span className="text-[10px] text-zinc-500 ml-1.5">({row.sessionNamesA})</span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="text-[10px] text-zinc-500">
-                        {weekB.shortLabel}: {row.volumeB > 0 ? `${row.volumeB.toLocaleString()} ${weightUnit}` : 'Rest'}
-                        {row.volumeB > 0 && <span className="ml-1">({row.sessionNamesB})</span>}
+                        {weekB.shortLabel}: {row.isFutureB
+                          ? 'Upcoming'
+                          : (row.volumeB && row.volumeB > 0)
+                          ? `${row.volumeB.toLocaleString()} ${weightUnit}`
+                          : 'Rest'}
+                        {!row.isFutureB && row.volumeB && row.volumeB > 0 ? <span className="ml-1">({row.sessionNamesB})</span> : null}
                       </div>
                     </div>
                   </div>
 
                   <div className="text-right">
-                    {row.delta > 0 ? (
+                    {row.isFutureA ? (
+                      <span className="text-[10px] text-zinc-600 font-mono">--</span>
+                    ) : row.delta > 0 ? (
                       <span className="text-[11px] font-bold text-white bg-zinc-900 border border-zinc-750 px-2 py-0.5 rounded-full">
                         +{row.delta.toLocaleString()} {weightUnit}
                       </span>

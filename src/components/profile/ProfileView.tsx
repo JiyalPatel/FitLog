@@ -69,11 +69,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {profile.isGuest ? 'A' : profile.displayName.charAt(0).toUpperCase()}
             </div>
           )}
-          <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="text-base font-bold text-white">{profile.displayName}</h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-bold text-white truncate">{profile.displayName}</h3>
               <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                className={`text-[10px] font-mono px-2 py-0.5 rounded border shrink-0 ${
                   profile.isGuest
                     ? 'bg-zinc-900 text-zinc-400 border-zinc-800'
                     : 'bg-white text-black font-semibold border-white'
@@ -82,7 +82,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {profile.isGuest ? 'OFFLINE JOURNAL' : 'SAVED TO ACCOUNT'}
               </span>
             </div>
-            <p className="text-xs text-zinc-500 font-mono mt-0.5">
+            <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate">
               {profile.email || 'Saved on this phone · Always ready'}
             </p>
           </div>
@@ -119,7 +119,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="text-sm font-semibold text-white">Weight Units</div>
             <div className="text-xs text-zinc-500 font-mono">Kilograms or Pounds</div>
           </div>
-          <div className="flex items-center p-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono">
+          <div className="flex items-center p-1 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-mono shrink-0">
             {(['kg', 'lbs'] as const).map((unit) => (
               <button
                 key={unit}
@@ -137,19 +137,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* Default Rest Timer */}
-        <div className="flex items-center justify-between pt-2 border-t border-zinc-900">
-          <div>
-            <div className="text-sm font-semibold text-white">Default Rest Interval</div>
-            <div className="text-xs text-zinc-500 font-mono">Countdown starts after each finished set</div>
+        <div className="pt-2 border-t border-zinc-900 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-white">Default Rest Interval</div>
+              <div className="text-xs text-zinc-500 font-mono">Countdown starts after each finished set</div>
+            </div>
+            <span className="text-xs font-mono font-bold text-white bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-800 shrink-0">
+              {profile.restTimerDefaultSeconds === 0 ? 'Off' : `${profile.restTimerDefaultSeconds}s`}
+            </span>
           </div>
-          <div className="flex items-center space-x-1 text-xs font-mono">
+          <div className="grid grid-cols-5 gap-1.5 text-xs font-mono">
             {[0, 60, 90, 120, 180].map((sec) => (
               <button
                 key={sec}
                 onClick={() => onUpdateProfile({ ...profile, restTimerDefaultSeconds: sec })}
-                className={`px-2 py-1 rounded-lg border transition-all ${
+                className={`py-2 rounded-xl border text-center font-medium transition-all ${
                   profile.restTimerDefaultSeconds === sec
-                    ? 'bg-white text-black font-bold border-white'
+                    ? 'bg-white text-black font-bold border-white shadow-sm'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700'
                 }`}
               >

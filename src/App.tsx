@@ -438,11 +438,12 @@ export function App() {
 
       {/* Profile & Settings Modal */}
       {isProfileOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col max-w-md mx-auto">
-          <div className="p-4 border-b border-zinc-900 flex justify-end">
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col max-w-md mx-auto">
+          <div className="px-4 py-3 border-b border-zinc-900 flex items-center justify-between">
+            <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Settings & Profile</span>
             <button
               onClick={() => setIsProfileOpen(false)}
-              className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-400 hover:text-white"
+              className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-300 hover:text-white transition-colors"
             >
               CLOSE
             </button>

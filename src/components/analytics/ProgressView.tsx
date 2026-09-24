@@ -1033,9 +1033,9 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
       </div>
 
       {/* 2. EXERCISE PROGRESSION CHART CARD */}
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3.5 shadow-xl">
-        {/* Header Row: Label & Metric Toggle (Cleanly separated so neither overflows) */}
-        <div className="flex items-center justify-between gap-2">
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-3.5 sm:p-4 space-y-3 sm:space-y-3.5 shadow-xl">
+        {/* Header Row: Label & Metric Toggle (Responsive flex-wrap prevents any overflow) */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 shrink-0">
             <Dumbbell className="w-3.5 h-3.5 text-zinc-400" />
             <span>EXERCISE PROGRESSION</span>
@@ -1059,48 +1059,59 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
           </div>
         </div>
 
-        {/* Full-Width Exercise Dropdown */}
-        <div className="relative">
-          <select
-            value={currentExercise}
-            onChange={(e) => setSelectedExercise(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono font-semibold text-white focus:outline-none focus:border-zinc-500 appearance-none cursor-pointer pr-8"
-          >
-            {allExerciseNames.length > 0 ? (
-              allExerciseNames.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))
-            ) : (
-              <option value={currentExercise}>{currentExercise}</option>
-            )}
-          </select>
-          <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-
-        {/* Timeframe Filter Pills */}
-        <div className="flex items-center p-0.5 rounded-xl bg-zinc-900 border border-zinc-800">
-          {(['1W', '1M', '3M', 'All'] as const).map((tf) => (
-            <button
-              key={tf}
-              onClick={() => setTimeframe(tf)}
-              className={`flex-1 py-1 rounded-lg text-[10px] font-mono font-medium transition-all ${
-                timeframe === tf
-                  ? 'bg-white text-black shadow-sm font-bold'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
+        {/* Dropdown & Timeframe Row (Stacks on mobile, side-by-side on sm+ screens) */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          {/* Exercise Dropdown */}
+          <div className="relative flex-1 min-w-0">
+            <select
+              value={currentExercise}
+              onChange={(e) => setSelectedExercise(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono font-semibold text-white focus:outline-none focus:border-zinc-500 appearance-none cursor-pointer pr-8"
             >
-              {tf}
-            </button>
-          ))}
+              {allExerciseNames.length > 0 ? (
+                allExerciseNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))
+              ) : (
+                <option value={currentExercise}>{currentExercise}</option>
+              )}
+            </select>
+            <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Timeframe Filter Pills */}
+          <div className="flex items-center p-0.5 rounded-xl bg-zinc-900 border border-zinc-800 sm:w-56 shrink-0">
+            {(['1W', '1M', '3M', 'All'] as const).map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`flex-1 py-1 rounded-lg text-[10px] font-mono font-medium transition-all ${
+                  timeframe === tf
+                    ? 'bg-white text-black shadow-sm font-bold'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Chart View */}
-        <div className="h-44 w-full pt-1">
+        <div className="h-44 sm:h-52 w-full pt-1">
           {exerciseChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={exerciseChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart
+                data={exerciseChartData}
+                margin={{
+                  top: 10,
+                  right: 12,
+                  left: metricType === 'volume' ? -10 : -18,
+                  bottom: 0,
+                }}
+              >
                 <XAxis
                   dataKey="date"
                   stroke="#71717a"
@@ -1108,6 +1119,8 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   tickLine={false}
                   axisLine={{ stroke: '#27272a' }}
                   padding={{ left: 16, right: 16 }}
+                  interval="preserveStartEnd"
+                  minTickGap={14}
                 />
                 <YAxis
                   stroke="#71717a"
@@ -1115,6 +1128,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                   tickLine={false}
                   axisLine={{ stroke: '#27272a' }}
                   domain={[0, (dataMax: number) => Math.max(10, Math.ceil(dataMax * 1.2))]}
+                  tickFormatter={(val) => (val >= 1000 ? `${(val / 1000).toFixed(val % 1000 === 0 ? 0 : 1)}k` : `${val}`)}
                 />
                 <Tooltip
                   content={({ active, payload }) => {

@@ -254,7 +254,9 @@ export function App() {
     setProfile(updatedProfile);
 
     // 2. Build and save custom or preset routine
-    const newRoutine = createRoutineFromSplit(data.splitId, data.targetDaysPerWeek);
+    const newRoutine = data.customRoutine
+      ? data.customRoutine
+      : createRoutineFromSplit(data.splitId, data.targetDaysPerWeek);
     await dataRepository.saveRoutine(newRoutine);
     setRoutine(newRoutine);
 

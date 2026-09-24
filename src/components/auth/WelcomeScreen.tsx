@@ -12,12 +12,21 @@ import {
   TrendingUp,
   TrendingDown,
   Activity,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Trash2,
+  Layers,
+  Moon,
+  Calendar,
+  Sparkle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dataRepository } from '../../services/storage/dataRepository';
 import { isFirebaseConfigured } from '../../lib/firebase';
-import { ONBOARDING_SPLITS } from '../../services/data/onboardingPresets';
+import { ONBOARDING_SPLITS, createRoutineFromSplit } from '../../services/data/onboardingPresets';
+import { Routine, RoutineDay, ExerciseTarget } from '../../types';
+import { ExercisePickerModal } from '../common/ExercisePickerModal';
+import { StandardExercise } from '../../services/data/standardExercises';
 
 export interface OnboardingData {
   accountMode: 'guest' | 'google';
@@ -29,7 +38,116 @@ export interface OnboardingData {
   splitId: string;
   targetDaysPerWeek: number;
   restTimerSeconds: number;
+  customRoutine?: Routine;
 }
+
+const INITIAL_CUSTOM_DAYS: RoutineDay[] = [
+  {
+    id: 'day-custom-1',
+    name: 'Chest & Triceps',
+    dayOrder: 0,
+    estimatedMinutes: 50,
+    exercises: [
+      {
+        id: 'ex-c-1',
+        name: 'Barbell Bench Press',
+        muscleGroup: 'Chest',
+        targetSets: 4,
+        targetRepsMin: 6,
+        targetRepsMax: 10,
+        orderIndex: 0,
+      },
+      {
+        id: 'ex-c-2',
+        name: 'Incline Dumbbell Press',
+        muscleGroup: 'Chest',
+        targetSets: 3,
+        targetRepsMin: 8,
+        targetRepsMax: 12,
+        orderIndex: 1,
+      },
+      {
+        id: 'ex-c-3',
+        name: 'Triceps Pushdown (Rope)',
+        muscleGroup: 'Triceps',
+        targetSets: 3,
+        targetRepsMin: 10,
+        targetRepsMax: 15,
+        orderIndex: 2,
+      },
+    ],
+  },
+  {
+    id: 'day-custom-2',
+    name: 'Back & Biceps',
+    dayOrder: 1,
+    estimatedMinutes: 50,
+    exercises: [
+      {
+        id: 'ex-c-4',
+        name: 'Lat Pulldown',
+        muscleGroup: 'Back',
+        targetSets: 4,
+        targetRepsMin: 8,
+        targetRepsMax: 12,
+        orderIndex: 0,
+      },
+      {
+        id: 'ex-c-5',
+        name: 'Barbell Bent Over Row',
+        muscleGroup: 'Back',
+        targetSets: 3,
+        targetRepsMin: 8,
+        targetRepsMax: 10,
+        orderIndex: 1,
+      },
+      {
+        id: 'ex-c-6',
+        name: 'Incline Dumbbell Curl',
+        muscleGroup: 'Biceps',
+        targetSets: 3,
+        targetRepsMin: 10,
+        targetRepsMax: 12,
+        orderIndex: 2,
+      },
+    ],
+  },
+  {
+    id: 'day-custom-3',
+    name: 'Legs & Shoulders',
+    dayOrder: 2,
+    estimatedMinutes: 55,
+    exercises: [
+      {
+        id: 'ex-c-7',
+        name: 'Barbell Back Squat',
+        muscleGroup: 'Legs',
+        targetSets: 4,
+        targetRepsMin: 6,
+        targetRepsMax: 10,
+        orderIndex: 0,
+      },
+      {
+        id: 'ex-c-8',
+        name: 'Romanian Deadlift (RDL)',
+        muscleGroup: 'Legs',
+        targetSets: 3,
+        targetRepsMin: 8,
+        targetRepsMax: 12,
+        orderIndex: 1,
+      },
+      {
+        id: 'ex-c-9',
+        name: 'Lateral Raise (Dumbbell)',
+        muscleGroup: 'Shoulders',
+        targetSets: 4,
+        targetRepsMin: 12,
+        targetRepsMax: 15,
+        orderIndex: 2,
+      },
+    ],
+  },
+];
 
 interface WelcomeScreenProps {
   onCompleteOnboarding: (data: OnboardingData) => Promise<void> | void;
@@ -56,8 +174,87 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   const [targetWeight, setTargetWeight] = useState<string>('');
 
   // Routine State
+  const [routineMode, setRoutineMode] = useState<'custom' | 'preset'>('custom');
+  const [customRoutineName, setCustomRoutineName] = useState<string>('My Custom Split');
+  const [customDays, setCustomDays] = useState<RoutineDay[]>(INITIAL_CUSTOM_DAYS);
+  const [activeCustomDayIdx, setActiveCustomDayIdx] = useState<number>(0);
   const [selectedSplitId, setSelectedSplitId] = useState<string>('ppl');
   const [targetDaysPerWeek, setTargetDaysPerWeek] = useState<number>(5);
+
+  // Exercise Picker Modal state for custom day
+  const [pickerDayIndex, setPickerDayIndex] = useState<number | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
+
+  const handleAddCustomDay = (isRest = false) => {
+    const newIdx = customDays.length;
+    const newDay: RoutineDay = {
+      id: `day-custom-${Date.now()}-${newIdx}`,
+      name: isRest ? 'Rest & Recovery' : `Day ${newIdx + 1}`,
+      dayOrder: newIdx,
+      estimatedMinutes: isRest ? 0 : 50,
+      isRestDay: isRest,
+      exercises: [],
+    };
+    setCustomDays([...customDays, newDay]);
+    setActiveCustomDayIdx(newIdx);
+  };
+
+  const handleDeleteCustomDay = (dayIdx: number) => {
+    if (customDays.length <= 1) return;
+    const newDays = customDays.filter((_, i) => i !== dayIdx);
+    setCustomDays(newDays);
+    setActiveCustomDayIdx(Math.max(0, dayIdx - 1));
+  };
+
+  const handleRenameDay = (dayIdx: number, newName: string) => {
+    const newDays = [...customDays];
+    newDays[dayIdx] = { ...newDays[dayIdx], name: newName };
+    setCustomDays(newDays);
+  };
+
+  const handleToggleRestDay = (dayIdx: number) => {
+    const newDays = [...customDays];
+    const isRest = !newDays[dayIdx].isRestDay;
+    newDays[dayIdx] = {
+      ...newDays[dayIdx],
+      isRestDay: isRest,
+      name: isRest && !newDays[dayIdx].name ? 'Rest & Recovery' : newDays[dayIdx].name,
+    };
+    setCustomDays(newDays);
+  };
+
+  const handleAddExerciseToCustomDay = (exercise: StandardExercise) => {
+    if (pickerDayIndex === null || !customDays[pickerDayIndex]) return;
+    const newDays = [...customDays];
+    const targetDay = newDays[pickerDayIndex];
+    const newEx: ExerciseTarget = {
+      id: `ex-custom-${Date.now()}-${targetDay.exercises.length}`,
+      name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      targetSets: exercise.defaultSets || 3,
+      targetRepsMin: exercise.defaultRepsMin || 8,
+      targetRepsMax: exercise.defaultRepsMax || 12,
+      orderIndex: targetDay.exercises.length,
+    };
+    targetDay.exercises = [...targetDay.exercises, newEx];
+    setCustomDays(newDays);
+    setIsPickerOpen(false);
+    setPickerDayIndex(null);
+  };
+
+  const handleDeleteExerciseFromDay = (dayIdx: number, exIdx: number) => {
+    const newDays = [...customDays];
+    newDays[dayIdx].exercises = newDays[dayIdx].exercises.filter((_, i) => i !== exIdx);
+    setCustomDays(newDays);
+  };
+
+  const handleCustomizePreset = (splitId: string) => {
+    const presetRoutine = createRoutineFromSplit(splitId, targetDaysPerWeek);
+    setCustomRoutineName(presetRoutine.name);
+    setCustomDays(presetRoutine.days);
+    setActiveCustomDayIdx(0);
+    setRoutineMode('custom');
+  };
 
   // Rest Timer State
   const [restTimerSeconds, setRestTimerSeconds] = useState<number>(90);
@@ -99,6 +296,22 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   };
 
   const handleFinish = () => {
+    let customRoutineResult: Routine | undefined = undefined;
+    if (routineMode === 'custom') {
+      customRoutineResult = {
+        id: `routine-${Date.now()}`,
+        name: customRoutineName.trim() || 'My Custom Split',
+        description: 'Personalized training routine created during onboarding.',
+        days: customDays.map((d, dIdx) => ({
+          ...d,
+          dayOrder: dIdx,
+        })),
+        currentQueueIndex: 0,
+        targetDaysPerWeek,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
     const data: OnboardingData = {
       accountMode,
       displayName: displayName.trim() || 'Athlete',
@@ -106,9 +319,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       currentWeight: currentWeight ? parseFloat(currentWeight) : undefined,
       goalType,
       targetWeight: targetWeight ? parseFloat(targetWeight) : undefined,
-      splitId: selectedSplitId,
+      splitId: routineMode === 'custom' ? 'custom' : selectedSplitId,
       targetDaysPerWeek,
       restTimerSeconds,
+      customRoutine: customRoutineResult,
     };
     onCompleteOnboarding(data);
   };
@@ -483,66 +697,296 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-5"
+                className="space-y-4"
               >
                 <div>
                   <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
                     Step 3 · Training Routine
                   </span>
                   <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
-                    Choose your workout split
+                    Set up your workout routine
                   </h2>
                   <p className="text-xs text-zinc-400 font-mono mt-1">
-                    Workouts roll forward smoothly if life gets busy.
+                    Build your own custom split by yourself, or pick a pre-built template.
                   </p>
                 </div>
 
-                {/* Split Cards */}
-                <div className="space-y-2.5">
-                  {ONBOARDING_SPLITS.map((split) => {
-                    const isSelected = selectedSplitId === split.id;
-                    return (
-                      <div
-                        key={split.id}
-                        onClick={() => {
-                          setSelectedSplitId(split.id);
-                          setTargetDaysPerWeek(split.recommendedDaysPerWeek);
-                        }}
-                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-zinc-900/90 border-white shadow-glow-sm'
-                            : 'bg-zinc-950 border-zinc-900 hover:border-zinc-800'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-white font-mono">{split.name}</span>
-                          <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                              isSelected ? 'bg-white border-white' : 'border-zinc-700'
+                {/* Setup Mode Switcher */}
+                <div className="flex p-1 rounded-2xl bg-zinc-950 border border-zinc-900">
+                  <button
+                    type="button"
+                    onClick={() => setRoutineMode('custom')}
+                    className={`flex-1 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      routineMode === 'custom'
+                        ? 'bg-white text-black shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Custom Routine</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRoutineMode('preset')}
+                    className={`flex-1 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      routineMode === 'preset'
+                        ? 'bg-white text-black shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Pre-Built Splits</span>
+                  </button>
+                </div>
+
+                {routineMode === 'custom' ? (
+                  <div className="space-y-3">
+                    {/* Routine Name */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono uppercase text-zinc-400">
+                        Routine Name
+                      </label>
+                      <input
+                        type="text"
+                        value={customRoutineName}
+                        onChange={(e) => setCustomRoutineName(e.target.value)}
+                        placeholder="e.g. My 4-Day Split"
+                        className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-white"
+                      />
+                    </div>
+
+                    {/* Day selector pills + Add Day */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-mono uppercase text-zinc-400">
+                          Routine Days ({customDays.length})
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleAddCustomDay(false)}
+                          className="text-[10px] font-mono text-white hover:text-zinc-300 flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-lg"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Day</span>
+                        </button>
+                      </div>
+
+                      <div className="flex space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+                        {customDays.map((d, dIdx) => (
+                          <button
+                            key={d.id || dIdx}
+                            type="button"
+                            onClick={() => setActiveCustomDayIdx(dIdx)}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-mono transition-all flex-shrink-0 flex items-center gap-1.5 ${
+                              activeCustomDayIdx === dIdx
+                                ? 'bg-white text-black font-bold shadow-sm'
+                                : 'bg-zinc-950 text-zinc-400 border border-zinc-850 hover:border-zinc-700'
                             }`}
                           >
-                            {isSelected && <Check className="w-2.5 h-2.5 text-black stroke-[3]" />}
+                            <span>{d.name || `Day ${dIdx + 1}`}</span>
+                            <span
+                              className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                                activeCustomDayIdx === dIdx
+                                  ? 'bg-zinc-200 text-black'
+                                  : 'bg-zinc-900 text-zinc-500'
+                              }`}
+                            >
+                              {d.isRestDay ? 'Rest' : d.exercises.length}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Active Day Card */}
+                    {customDays[activeCustomDayIdx] && (
+                      <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1">
+                            <label className="text-[9px] font-mono uppercase text-zinc-500 block mb-0.5">
+                              Day Name
+                            </label>
+                            <input
+                              type="text"
+                              value={customDays[activeCustomDayIdx].name}
+                              onChange={(e) => handleRenameDay(activeCustomDayIdx, e.target.value)}
+                              placeholder="e.g. Chest & Triceps"
+                              className="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-white"
+                            />
+                          </div>
+
+                          <div className="flex items-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRestDay(activeCustomDayIdx)}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono border transition-all flex items-center gap-1 ${
+                                customDays[activeCustomDayIdx].isRestDay
+                                  ? 'bg-zinc-800 text-white border-zinc-600'
+                                  : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
+                              }`}
+                              title="Toggle Rest Day"
+                            >
+                              <Moon className="w-3.5 h-3.5" />
+                              <span className="text-[10px]">
+                                {customDays[activeCustomDayIdx].isRestDay ? 'Rest' : 'Workout'}
+                              </span>
+                            </button>
+
+                            {customDays.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCustomDay(activeCustomDayIdx)}
+                                className="p-2 text-zinc-500 hover:text-red-400 rounded-lg bg-zinc-900 border border-zinc-800 transition-colors"
+                                title="Delete this day"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
 
-                        <p className="text-[11px] text-zinc-400 font-mono mt-1">
-                          {split.description}
-                        </p>
+                        {customDays[activeCustomDayIdx].isRestDay ? (
+                          <div className="py-4 px-3 rounded-xl bg-zinc-900/40 border border-zinc-900 text-center space-y-1">
+                            <Moon className="w-5 h-5 text-zinc-500 mx-auto" />
+                            <div className="text-xs font-mono text-zinc-300">Rest & Recovery Day</div>
+                            <div className="text-[10px] font-mono text-zinc-500">
+                              Serves as an active recovery marker in your continuous cycle.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                                Exercises ({customDays[activeCustomDayIdx].exercises.length})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPickerDayIndex(activeCustomDayIdx);
+                                  setIsPickerOpen(true);
+                                }}
+                                className="text-[10px] font-mono text-white hover:text-zinc-300 flex items-center gap-1 bg-zinc-900 border border-zinc-800 px-2 py-1 rounded-lg"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Add Movement</span>
+                              </button>
+                            </div>
 
-                        <div className="flex flex-wrap gap-1.5 mt-2.5">
-                          {split.previewDays.map((d, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-0.5 rounded-md bg-zinc-850 border border-zinc-750 text-[10px] font-mono text-zinc-300"
-                            >
-                              {d}
-                            </span>
-                          ))}
-                        </div>
+                            {customDays[activeCustomDayIdx].exercises.length === 0 ? (
+                              <div className="py-4 text-center rounded-xl border border-dashed border-zinc-850 p-3 space-y-1.5">
+                                <Dumbbell className="w-5 h-5 text-zinc-600 mx-auto" />
+                                <div className="text-xs font-mono text-zinc-400">No exercises added yet</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPickerDayIndex(activeCustomDayIdx);
+                                    setIsPickerOpen(true);
+                                  }}
+                                  className="px-3 py-1 bg-white text-black text-[11px] font-mono font-bold rounded-lg hover:bg-zinc-200"
+                                >
+                                  Browse 90+ Gym Movements
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                {customDays[activeCustomDayIdx].exercises.map((ex, exIdx) => (
+                                  <div
+                                    key={ex.id || exIdx}
+                                    className="p-2 rounded-xl bg-zinc-900/70 border border-zinc-850 flex items-center justify-between gap-2"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs font-semibold text-white truncate font-mono">
+                                        {ex.name}
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 text-zinc-400 border border-zinc-800">
+                                          {ex.muscleGroup}
+                                        </span>
+                                        <span className="text-[10px] font-mono text-zinc-500">
+                                          {ex.targetSets} sets · {ex.targetRepsMin}–{ex.targetRepsMax} reps
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteExerciseFromDay(activeCustomDayIdx, exIdx)}
+                                      className="p-1.5 text-zinc-500 hover:text-red-400 rounded-lg transition-colors flex-shrink-0"
+                                      title="Remove exercise"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Preset Split Cards */
+                  <div className="space-y-2.5">
+                    {ONBOARDING_SPLITS.map((split) => {
+                      const isSelected = selectedSplitId === split.id;
+                      return (
+                        <div
+                          key={split.id}
+                          onClick={() => {
+                            setSelectedSplitId(split.id);
+                            setTargetDaysPerWeek(split.recommendedDaysPerWeek);
+                          }}
+                          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                            isSelected
+                              ? 'bg-zinc-900/90 border-white shadow-glow-sm'
+                              : 'bg-zinc-950 border-zinc-900 hover:border-zinc-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-sm text-white font-mono">{split.name}</span>
+                            <div
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                isSelected ? 'bg-white border-white' : 'border-zinc-700'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5 text-black stroke-[3]" />}
+                            </div>
+                          </div>
+
+                          <p className="text-[11px] text-zinc-400 font-mono mt-1">
+                            {split.description}
+                          </p>
+
+                          <div className="flex flex-wrap gap-1.5 mt-2.5">
+                            {split.previewDays.map((d, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 rounded-md bg-zinc-850 border border-zinc-750 text-[10px] font-mono text-zinc-300"
+                              >
+                                {d}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="pt-2.5 mt-2.5 border-t border-zinc-900 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCustomizePreset(split.id);
+                              }}
+                              className="text-[10px] font-mono text-zinc-400 hover:text-white flex items-center gap-1"
+                            >
+                              <span>Customize this split</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Days per week target */}
                 <div className="space-y-1.5 pt-1">
@@ -746,11 +1190,29 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   )}
 
                   <div className="flex items-center justify-between pb-2 border-b border-zinc-900">
-                    <span className="text-zinc-500">SPLIT</span>
-                    <span className="text-white font-bold">
-                      {ONBOARDING_SPLITS.find((s) => s.id === selectedSplitId)?.name}
+                    <span className="text-zinc-500">ROUTINE</span>
+                    <span className="text-white font-bold text-right truncate max-w-[200px]">
+                      {routineMode === 'custom'
+                        ? `${customRoutineName || 'Custom Split'} (${customDays.length} Days)`
+                        : ONBOARDING_SPLITS.find((s) => s.id === selectedSplitId)?.name}
                     </span>
                   </div>
+
+                  {routineMode === 'custom' && (
+                    <div className="pb-2 border-b border-zinc-900 space-y-1">
+                      <span className="text-zinc-500 text-[10px] uppercase">DAYS PREVIEW</span>
+                      <div className="flex flex-wrap gap-1">
+                        {customDays.map((d, idx) => (
+                          <span
+                            key={d.id || idx}
+                            className="px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 text-[10px] font-mono border border-zinc-800"
+                          >
+                            {d.name || `Day ${idx + 1}`} ({d.isRestDay ? 'Rest' : `${d.exercises.length} ex`})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between pb-2 border-b border-zinc-900">
                     <span className="text-zinc-500">WEEKLY TARGET</span>
@@ -794,6 +1256,22 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           All settings can be changed anytime from the Settings & Routine tabs.
         </div>
       </div>
+
+      {/* Exercise Picker Modal for Custom Routine Builder */}
+      <ExercisePickerModal
+        isOpen={isPickerOpen}
+        title={`Add Exercise to ${
+          pickerDayIndex !== null && customDays[pickerDayIndex]
+            ? customDays[pickerDayIndex].name
+            : 'Workout'
+        }`}
+        subtitle="Choose from 90+ standard exercises or enter custom"
+        onSelectExercise={handleAddExerciseToCustomDay}
+        onClose={() => {
+          setIsPickerOpen(false);
+          setPickerDayIndex(null);
+        }}
+      />
     </div>
   );
 };

@@ -42,6 +42,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
   onFinishWorkout,
   onCancelWorkout,
 }) => {
+  const weightUnit = profile?.weightUnit || 'kg';
   // Elapsed Workout Time
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(session.durationSeconds || 0);
 
@@ -111,7 +112,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
         (e) => e.exerciseName.toLowerCase() === exerciseName.toLowerCase()
       );
       if (ex && ex.sets.length > 0) {
-        return ex.sets.map((s) => `${s.weight}kg × ${s.reps}`).join(' · ');
+        return ex.sets.map((s) => `${s.weight}${weightUnit} × ${s.reps}`).join(' · ');
       }
     }
     return null;
@@ -120,7 +121,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
   // Get PR for an exercise
   const getExercisePR = (exerciseName: string) => {
     const { maxWeight, repsAtMax } = getHistoricalMaxWeight(exerciseName, prs, previousSessions);
-    return maxWeight > 0 ? `${maxWeight}kg${repsAtMax > 0 ? ` × ${repsAtMax}` : ''}` : null;
+    return maxWeight > 0 ? `${maxWeight}${weightUnit}${repsAtMax > 0 ? ` × ${repsAtMax}` : ''}` : null;
   };
 
   // Handle Set Toggle Completed
@@ -153,7 +154,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
 
         setNewPRAlert({
           exercise: exerciseName,
-          details: `${targetSet.weight} kg × ${targetSet.reps} reps`,
+          details: `${targetSet.weight} ${weightUnit} × ${targetSet.reps} reps`,
         });
 
         setTimeout(() => setNewPRAlert(null), 4000);
@@ -575,7 +576,7 @@ export const ActiveWorkoutView: React.FC<ActiveWorkoutViewProps> = ({
               {/* Sets Table Header */}
               <div className="grid grid-cols-12 gap-2 text-[10px] font-mono uppercase text-zinc-400 px-1">
                 <div className="col-span-2">Set</div>
-                <div className="col-span-5 text-center">Weight (kg)</div>
+                <div className="col-span-5 text-center">Weight ({weightUnit})</div>
                 <div className="col-span-3 text-center">Reps</div>
                 <div className="col-span-2 text-center">Done</div>
               </div>

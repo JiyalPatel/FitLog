@@ -429,6 +429,7 @@ export function App() {
         <WorkoutSummaryModal
           session={completedSummarySession}
           previousSessions={sessions}
+          weightUnit={profile.weightUnit || 'kg'}
           onClose={() => {
             setCompletedSummarySession(null);
             setActiveTab('home');

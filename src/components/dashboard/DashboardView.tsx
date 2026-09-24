@@ -169,7 +169,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   return (
-    <div className="flex-1 px-4 py-5 pb-24 space-y-6 overflow-y-auto">
+    <div className="flex-1 px-4 py-5 pb-32 pb-safe space-y-6 overflow-y-auto">
       {/* 1. Rolling Queue Next Workout Hero Card */}
       {nextQueue ? (
         nextQueue.routineDay.isRestDay ? (
@@ -570,15 +570,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Quick Footer Link to Analytics */}
-        <div className="pt-2 border-t border-zinc-900 flex items-center justify-between">
-          <span className="text-[10px] font-mono text-zinc-500">
+        <div className="pt-2.5 border-t border-zinc-900 flex items-center justify-between gap-2">
+          <span className="text-[10px] font-mono text-zinc-500 truncate min-w-0">
             {thisWeekTotalVolume > 0
               ? 'Progressive load tracking active'
-              : 'Log your first workout this week to trace your curve'}
+              : 'Log your first workout to start tracking'}
           </span>
           <button
             onClick={onViewProgress}
-            className="text-[11px] font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+            className="text-[11px] font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors shrink-0 whitespace-nowrap"
           >
             <span>Compare in Analytics</span>
             <ChevronRight className="w-3 h-3" />
@@ -757,10 +757,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="text-right">
                   <div className="text-sm font-bold font-mono text-white">
                     {pr.prType === 'weight'
-                      ? `${pr.weight} kg × ${pr.reps}`
+                      ? `${pr.weight} ${weightUnit} × ${pr.reps}`
                       : pr.prType === '1rm'
-                      ? `~${pr.prValue} kg (1RM)`
-                      : `${pr.prValue} kg vol`}
+                      ? `~${pr.prValue} ${weightUnit} (1RM)`
+                      : `${pr.prValue} ${weightUnit} vol`}
                   </div>
                   <span className="text-[10px] font-mono text-zinc-400 uppercase">
                     {pr.prType} PR

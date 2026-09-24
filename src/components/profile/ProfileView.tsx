@@ -44,7 +44,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className="flex-1 px-4 py-5 pb-24 space-y-6 overflow-y-auto">
+    <div className="flex-1 px-4 py-5 pb-32 pb-safe space-y-6 overflow-y-auto">
       {/* Header */}
       <div>
         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">

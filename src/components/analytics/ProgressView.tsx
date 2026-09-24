@@ -350,7 +350,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   const maxMuscleSets = Math.max(...Object.values(muscleCounts), 1);
 
   return (
-    <div className="flex-1 px-4 py-5 pb-24 space-y-6 overflow-y-auto">
+    <div className="flex-1 px-4 py-5 pb-32 pb-safe space-y-6 overflow-y-auto">
       {/* Header */}
       <div>
         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
@@ -593,11 +593,25 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
           </div>
         </div>
 
+        {/* Legend */}
+        {comparisonGraphMode !== 'history' && (
+          <div className="flex items-center justify-end space-x-4 text-[11px] font-mono text-zinc-400">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-white inline-block shadow-glow-sm" />
+              <span className="text-white font-medium">{weekA.shortLabel}</span>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-zinc-500 inline-block" />
+              <span className="text-zinc-400">{weekB.shortLabel}</span>
+            </div>
+          </div>
+        )}
+
         {/* Chart View */}
         <div className="h-52 w-full pt-1">
           {comparisonGraphMode === 'daily' && (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={combinedDailyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={combinedDailyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <XAxis
                   dataKey="day"
                   stroke="#52525b"
@@ -868,18 +882,6 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
           )}
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-center space-x-6 pt-2 border-t border-zinc-900 text-[11px] font-mono text-zinc-400">
-          <div className="flex items-center space-x-2">
-            <span className="w-3 h-1 rounded bg-white inline-block shadow-glow-sm" />
-            <span className="text-white font-medium">{weekA.label}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-3 h-0.5 border-t-2 border-dashed border-zinc-500 inline-block" />
-            <span className="text-zinc-400">{weekB.label}</span>
-          </div>
-        </div>
-
         {/* Expandable Day-by-Day Matrix Breakdown */}
         <div className="pt-2 border-t border-zinc-900 space-y-2">
           <button
@@ -975,14 +977,14 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                 const sDiff = mA.sets - mB.sets;
                 return (
                   <div key={mg} className="space-y-1 p-2 rounded-lg bg-zinc-900/30 border border-zinc-850/60">
-                    <div className="flex justify-between text-xs font-mono">
+                    <div className="flex justify-between items-center text-xs font-mono">
                       <span className="text-zinc-200 font-semibold">{mg}</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-white font-bold">{mA.sets} sets ({mA.volume.toLocaleString()} {weightUnit})</span>
+                      <div className="flex items-center space-x-1.5 text-[11px]">
+                        <span className="text-white font-bold">{mA.sets} sets</span>
                         <span className="text-zinc-500 text-[10px]">vs</span>
                         <span className="text-zinc-400">{mB.sets} sets</span>
-                        <span className={`text-[10px] px-1 py-0.2 rounded ${sDiff > 0 ? 'bg-zinc-800 text-white font-bold' : sDiff < 0 ? 'bg-zinc-900 text-zinc-400' : 'text-zinc-600'}`}>
-                          {sDiff > 0 ? `+${sDiff}s` : sDiff < 0 ? `${sDiff}s` : '='}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${sDiff > 0 ? 'bg-zinc-800 text-white font-bold' : sDiff < 0 ? 'bg-zinc-900 text-zinc-400' : 'text-zinc-600'}`}>
+                          {sDiff > 0 ? `+${sDiff}` : sDiff < 0 ? `${sDiff}` : '='}
                         </span>
                       </div>
                     </div>

@@ -9,12 +9,14 @@ import { calculateWorkoutScore, calculateBestImprovement } from '../../services/
 interface WorkoutSummaryModalProps {
   session: WorkoutSession;
   previousSessions: SessionType[];
+  weightUnit?: string;
   onClose: () => void;
 }
 
 export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
   session,
   previousSessions,
+  weightUnit = 'kg',
   onClose,
 }) => {
   const scoreBreakdown = calculateWorkoutScore(session, previousSessions);
@@ -91,7 +93,7 @@ export const WorkoutSummaryModal: React.FC<WorkoutSummaryModalProps> = ({
           <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
             <Dumbbell className="w-4 h-4 text-zinc-400 mx-auto mb-1" />
             <div className="text-sm font-bold font-mono text-white">
-              {session.totalVolume} kg
+              {session.totalVolume} {weightUnit}
             </div>
             <div className="text-[10px] font-mono text-zinc-500">Volume</div>
           </div>

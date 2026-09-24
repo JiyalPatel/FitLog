@@ -1,6 +1,30 @@
-import React from 'react';
-import { Play, Flame, AlertCircle, TrendingUp, Award, ChevronRight, Clock, Sparkles, Moon, CheckCircle2, SkipForward, Scale, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Play, 
+  Flame, 
+  AlertCircle, 
+  TrendingUp, 
+  TrendingDown, 
+  Award, 
+  ChevronRight, 
+  Clock, 
+  Sparkles, 
+  Moon, 
+  CheckCircle2, 
+  SkipForward, 
+  Scale, 
+  Plus, 
+  Activity 
+} from 'lucide-react';
 import { motion } from 'framer-motion';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 import { Routine, WorkoutSession, PersonalRecord, ProgressiveOverloadTip, WeeklySummaryStats, WeightEntry, WeightGoal } from '../../types';
 import { getNextWorkoutQueue, getUpcomingQueue } from '../../services/engine/rollingQueue';
 import { calculateWeightStats } from '../../services/engine/weightEngine';
@@ -42,10 +66,104 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onViewWeight,
   onQuickLogWeight,
 }) => {
+  const [homeVolumeMode, setHomeVolumeMode] = useState<'daily' | 'trend'>('daily');
   const lastSession = recentSessions[0];
   const nextQueue = getNextWorkoutQueue(routine, lastSession);
   const upcomingList = getUpcomingQueue(routine, 4);
   const weightStats = calculateWeightStats(weightEntries, weightGoal);
+
+  // Calculate This Week's Volume Performance Data (Monday to Sunday)
+  const completed = recentSessions.filter((s) => s.status === 'completed');
+
+  const now = new Date();
+  const currentMonday = new Date(now);
+  const day = currentMonday.getDay();
+  const diff = currentMonday.getDate() - day + (day === 0 ? -6 : 1);
+  currentMonday.setDate(diff);
+  currentMonday.setHours(0, 0, 0, 0);
+
+  const lastWeekMonday = new Date(currentMonday);
+  lastWeekMonday.setDate(lastWeekMonday.getDate() - 7);
+  const lastWeekSunday = new Date(currentMonday);
+  lastWeekSunday.setMilliseconds(-1);
+
+  const lastWeekSessions = completed.filter((s) => {
+    const t = new Date(s.completedAt || s.startedAt).getTime();
+    return t >= lastWeekMonday.getTime() && t <= lastWeekSunday.getTime();
+  });
+  const lastWeekTotalVolume = lastWeekSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
+
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  let runningVolume = 0;
+  let thisWeekTotalVolume = 0;
+  let workoutsThisWeek = 0;
+
+  const thisWeekDailyPoints = dayNames.map((name, index) => {
+    const dayDate = new Date(currentMonday);
+    dayDate.setDate(dayDate.getDate() + index);
+    const startOfDay = new Date(dayDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(dayDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const matchingSessions = completed.filter((s) => {
+      const t = new Date(s.completedAt || s.startedAt).getTime();
+      return t >= startOfDay.getTime() && t <= endOfDay.getTime();
+    });
+
+    const dayVol = matchingSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
+    thisWeekTotalVolume += dayVol;
+    workoutsThisWeek += matchingSessions.length;
+    runningVolume += dayVol;
+
+    const isToday = now.toDateString() === dayDate.toDateString();
+    const isPast = dayDate <= now;
+
+    return {
+      day: name,
+      dateLabel: dayDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      volume: dayVol,
+      cumulativeVolume: runningVolume,
+      workouts: matchingSessions.length,
+      sessionNames: matchingSessions.map((s) => s.name).join(', '),
+      isToday,
+      isPast,
+    };
+  });
+
+  let volumeChangePercent = 0;
+  if (lastWeekTotalVolume > 0) {
+    volumeChangePercent = Math.round(
+      ((thisWeekTotalVolume - lastWeekTotalVolume) / lastWeekTotalVolume) * 100
+    );
+  } else if (thisWeekTotalVolume > 0) {
+    volumeChangePercent = 100;
+  }
+
+  // 6-week trend data
+  const multiWeekTrend = [];
+  for (let i = 5; i >= 0; i--) {
+    const wStart = new Date(currentMonday);
+    wStart.setDate(wStart.getDate() - i * 7);
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wEnd.getDate() + 6);
+    wEnd.setHours(23, 59, 59, 999);
+
+    const wSessions = completed.filter((s) => {
+      const t = new Date(s.completedAt || s.startedAt).getTime();
+      return t >= wStart.getTime() && t <= wEnd.getTime();
+    });
+
+    const vol = wSessions.reduce((acc, s) => acc + (s.totalVolume || 0), 0);
+    const label = i === 0 ? 'This Wk' : i === 1 ? 'Last Wk' : `${i}w ago`;
+
+    multiWeekTrend.push({
+      weekLabel: label,
+      volume: vol,
+      workouts: wSessions.length,
+      isCurrent: i === 0,
+    });
+  }
 
   return (
     <div className="flex-1 px-4 py-5 pb-24 space-y-6 overflow-y-auto">
@@ -229,6 +347,213 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {weeklyStats.workoutsCompleted} / {weeklyStats.targetWorkouts} completed
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* 2.2 Weekly Performance Volume Line Graph Card */}
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3.5 shadow-xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-white" />
+                OVERALL PERFORMANCE · VOLUME
+              </span>
+              {volumeChangePercent > 0 ? (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-white border border-zinc-800 flex items-center gap-1 font-bold">
+                  <TrendingUp className="w-3 h-3 text-white" /> +{volumeChangePercent}%
+                </span>
+              ) : volumeChangePercent < 0 ? (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-1">
+                  <TrendingDown className="w-3 h-3 text-zinc-400" /> {volumeChangePercent}%
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-baseline space-x-2 mt-1">
+              <span className="text-2xl font-bold font-mono text-white">
+                {thisWeekTotalVolume.toLocaleString()}
+              </span>
+              <span className="text-xs font-mono text-zinc-400 uppercase font-semibold">
+                {weightUnit} this week
+              </span>
+            </div>
+            <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
+              {workoutsThisWeek} workout{workoutsThisWeek === 1 ? '' : 's'} logged · Last week: {lastWeekTotalVolume.toLocaleString()} {weightUnit}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono">
+            <button
+              onClick={() => setHomeVolumeMode('daily')}
+              className={`px-2 py-1 rounded transition-colors ${
+                homeVolumeMode === 'daily'
+                  ? 'bg-white text-black font-bold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              This Week
+            </button>
+            <button
+              onClick={() => setHomeVolumeMode('trend')}
+              className={`px-2 py-1 rounded transition-colors ${
+                homeVolumeMode === 'trend'
+                  ? 'bg-white text-black font-bold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              6-Wk Trend
+            </button>
+          </div>
+        </div>
+
+        {/* Line Chart */}
+        <div className="h-44 w-full pt-1">
+          <ResponsiveContainer width="100%" height="100%">
+            {homeVolumeMode === 'daily' ? (
+              <AreaChart data={thisWeekDailyPoints}>
+                <defs>
+                  <linearGradient id="homeVolumeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="day"
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                />
+                <YAxis
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                  tickFormatter={(val) => (val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}`)}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 shadow-xl font-mono text-xs text-white space-y-1">
+                          <div className="font-bold flex items-center justify-between gap-3">
+                            <span>
+                              {data.day} ({data.dateLabel})
+                            </span>
+                            {data.isToday && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-white text-black font-bold">
+                                TODAY
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-white font-bold pt-0.5">
+                            {data.volume > 0
+                              ? `${data.volume.toLocaleString()} ${weightUnit}`
+                              : 'Rest / No workouts'}
+                          </div>
+                          {data.sessionNames && (
+                            <div className="text-[10px] text-zinc-400 truncate max-w-[180px]">
+                              {data.sessionNames}
+                            </div>
+                          )}
+                          <div className="text-[9px] text-zinc-500 pt-0.5 border-t border-zinc-900">
+                            Cumulative: {data.cumulativeVolume.toLocaleString()} {weightUnit}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="volume"
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#homeVolumeGrad)"
+                  dot={{ fill: '#ffffff', strokeWidth: 1.5, r: 3 }}
+                  activeDot={{ r: 5, fill: '#ffffff', stroke: '#000000', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            ) : (
+              <AreaChart data={multiWeekTrend}>
+                <defs>
+                  <linearGradient id="homeTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="weekLabel"
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                />
+                <YAxis
+                  stroke="#52525b"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#27272a' }}
+                  tickFormatter={(val) => (val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}`)}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 shadow-xl font-mono text-xs text-white space-y-1">
+                          <div className="font-bold flex items-center justify-between gap-3">
+                            <span>{data.weekLabel}</span>
+                            {data.isCurrent && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-white text-black font-bold">
+                                CURRENT
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-white font-bold pt-0.5">
+                            {data.volume.toLocaleString()} {weightUnit}
+                          </div>
+                          <div className="text-[10px] text-zinc-400">
+                            {data.workouts} workout{data.workouts === 1 ? '' : 's'}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="volume"
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#homeTrendGrad)"
+                  dot={{ fill: '#ffffff', strokeWidth: 1.5, r: 3 }}
+                  activeDot={{ r: 5, fill: '#ffffff', stroke: '#000000', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+
+        {/* Quick Footer Link to Analytics */}
+        <div className="pt-2 border-t border-zinc-900 flex items-center justify-between">
+          <span className="text-[10px] font-mono text-zinc-500">
+            {thisWeekTotalVolume > 0
+              ? 'Progressive load tracking active'
+              : 'Log your first workout this week to trace your curve'}
+          </span>
+          <button
+            onClick={onViewProgress}
+            className="text-[11px] font-mono text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+          >
+            <span>Compare in Analytics</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
         </div>
       </div>
 

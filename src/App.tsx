@@ -402,7 +402,11 @@ export function App() {
         )}
 
         {activeTab === 'progress' && (
-          <ProgressView sessions={sessions} prs={prs} />
+          <ProgressView
+            sessions={sessions}
+            prs={prs}
+            weightUnit={profile.weightUnit || 'kg'}
+          />
         )}
 
         {activeTab === 'routine' && (

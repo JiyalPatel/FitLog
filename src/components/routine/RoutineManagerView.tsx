@@ -36,7 +36,7 @@ const PRESET_TEMPLATES = [
           { name: 'Pec Dec Fly', muscleGroup: 'Chest', sets: 3, minReps: 12, maxReps: 15 },
           { name: 'Dumbbell Shoulder Press', muscleGroup: 'Shoulders', sets: 3, minReps: 8, maxReps: 12 },
           { name: 'Lateral Raise (Dumbbell)', muscleGroup: 'Shoulders', sets: 4, minReps: 12, maxReps: 15 },
-          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 15 },
+          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Triceps', sets: 3, minReps: 10, maxReps: 15 },
         ],
       },
       {
@@ -47,8 +47,8 @@ const PRESET_TEMPLATES = [
           { name: 'Barbell Bent Over Row', muscleGroup: 'Back', sets: 4, minReps: 8, maxReps: 10 },
           { name: 'Seated Cable Row', muscleGroup: 'Back', sets: 3, minReps: 10, maxReps: 12 },
           { name: 'Face Pull', muscleGroup: 'Shoulders', sets: 3, minReps: 15, maxReps: 20 },
-          { name: 'Incline Dumbbell Curl', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 12 },
-          { name: 'Hammer Curl', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 15 },
+          { name: 'Incline Dumbbell Curl', muscleGroup: 'Biceps', sets: 3, minReps: 10, maxReps: 12 },
+          { name: 'Hammer Curl', muscleGroup: 'Biceps', sets: 3, minReps: 10, maxReps: 15 },
         ],
       },
       {
@@ -70,14 +70,14 @@ const PRESET_TEMPLATES = [
     days: [
       {
         name: 'Upper Body A',
-        muscle: 'Chest / Back / Arms',
+        muscle: 'Chest / Back / Biceps & Triceps',
         exercises: [
           { name: 'Barbell Bench Press', muscleGroup: 'Chest', sets: 4, minReps: 6, maxReps: 10 },
           { name: 'Barbell Bent Over Row', muscleGroup: 'Back', sets: 4, minReps: 6, maxReps: 10 },
           { name: 'Dumbbell Shoulder Press', muscleGroup: 'Shoulders', sets: 3, minReps: 8, maxReps: 12 },
           { name: 'Lat Pulldown', muscleGroup: 'Back', sets: 3, minReps: 8, maxReps: 12 },
-          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 12 },
-          { name: 'Incline Dumbbell Curl', muscleGroup: 'Arms', sets: 3, minReps: 10, maxReps: 12 },
+          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Triceps', sets: 3, minReps: 10, maxReps: 12 },
+          { name: 'Incline Dumbbell Curl', muscleGroup: 'Biceps', sets: 3, minReps: 10, maxReps: 12 },
         ],
       },
       {
@@ -105,7 +105,7 @@ const PRESET_TEMPLATES = [
           { name: 'Barbell Bench Press', muscleGroup: 'Chest', sets: 3, minReps: 8, maxReps: 10 },
           { name: 'Lat Pulldown', muscleGroup: 'Back', sets: 3, minReps: 8, maxReps: 12 },
           { name: 'Lateral Raise (Dumbbell)', muscleGroup: 'Shoulders', sets: 3, minReps: 12, maxReps: 15 },
-          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Arms', sets: 2, minReps: 12, maxReps: 15 },
+          { name: 'Triceps Pushdown (Rope)', muscleGroup: 'Triceps', sets: 2, minReps: 12, maxReps: 15 },
         ],
       },
     ],

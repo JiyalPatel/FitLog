@@ -1,5 +1,25 @@
-import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal } from '../../types';
+import { Routine, WorkoutSession, PersonalRecord, UserProfile, WeightEntry, WeightGoal, MuscleGroup } from '../../types';
 import { defaultRoutine, initialHistoricalSessions, initialPRs, initialGuestProfile } from './mockInitialData';
+
+function normalizeMuscleGroup(name: string, group: MuscleGroup): MuscleGroup {
+  if (group !== 'Arms') return group;
+  const n = (name || '').toLowerCase();
+  if (
+    n.includes('tricep') ||
+    n.includes('dip') ||
+    n.includes('pushdown') ||
+    n.includes('skull') ||
+    n.includes('close-grip') ||
+    n.includes('extension') ||
+    n.includes('kickback')
+  ) {
+    return 'Triceps';
+  }
+  if (n.includes('wrist') || n.includes('farmer') || n.includes('hang')) {
+    return 'Forearms';
+  }
+  return 'Biceps';
+}
 
 const STORAGE_KEYS = {
   PROFILE: 'fitlog_profile',
@@ -45,7 +65,22 @@ export class LocalStorageStore {
   getRoutine(): Routine {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ROUTINE);
-      return data ? JSON.parse(data) : defaultRoutine;
+      const routine: Routine = data ? JSON.parse(data) : defaultRoutine;
+      let modified = false;
+      if (routine?.days) {
+        routine.days.forEach((d) => {
+          d.exercises?.forEach((e) => {
+            if (e.muscleGroup === 'Arms') {
+              e.muscleGroup = normalizeMuscleGroup(e.name, e.muscleGroup);
+              modified = true;
+            }
+          });
+        });
+      }
+      if (modified) {
+        this.saveRoutine(routine);
+      }
+      return routine;
     } catch {
       return defaultRoutine;
     }
@@ -58,7 +93,20 @@ export class LocalStorageStore {
   getSessions(): WorkoutSession[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SESSIONS);
-      return data ? JSON.parse(data) : initialHistoricalSessions;
+      const sessions: WorkoutSession[] = data ? JSON.parse(data) : initialHistoricalSessions;
+      let modified = false;
+      sessions.forEach((s) => {
+        s.exercises?.forEach((e) => {
+          if (e.muscleGroup === 'Arms') {
+            e.muscleGroup = normalizeMuscleGroup(e.exerciseName, e.muscleGroup);
+            modified = true;
+          }
+        });
+      });
+      if (modified) {
+        localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+      }
+      return sessions;
     } catch {
       return initialHistoricalSessions;
     }
@@ -105,7 +153,14 @@ export class LocalStorageStore {
   getActiveSession(): WorkoutSession | null {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION);
-      return data ? JSON.parse(data) : null;
+      if (!data) return null;
+      const session: WorkoutSession = JSON.parse(data);
+      session.exercises?.forEach((e) => {
+        if (e.muscleGroup === 'Arms') {
+          e.muscleGroup = normalizeMuscleGroup(e.exerciseName, e.muscleGroup);
+        }
+      });
+      return session;
     } catch {
       return null;
     }

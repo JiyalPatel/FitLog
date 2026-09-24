@@ -16,6 +16,7 @@ const PRESET_WORKOUT_NAMES = [
   'Upper Body',
   'Lower Body',
   'Full Body',
+  'Biceps & Triceps',
   'Arms & Delts',
   'Chest & Triceps',
   'Back & Biceps',

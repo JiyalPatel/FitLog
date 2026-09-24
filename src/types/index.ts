@@ -1,6 +1,15 @@
 // src/types/index.ts
 
-export type MuscleGroup = 'Chest' | 'Back' | 'Shoulders' | 'Legs' | 'Arms' | 'Core';
+export type MuscleGroup =
+  | 'Chest'
+  | 'Back'
+  | 'Shoulders'
+  | 'Legs'
+  | 'Biceps'
+  | 'Triceps'
+  | 'Forearms'
+  | 'Core'
+  | 'Arms';
 
 export interface ExerciseTarget {
   id: string;

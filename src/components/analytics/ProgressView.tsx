@@ -142,7 +142,9 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
     Back: 0,
     Shoulders: 0,
     Legs: 0,
-    Arms: 0,
+    Biceps: 0,
+    Triceps: 0,
+    Forearms: 0,
     Core: 0,
   };
 
@@ -150,6 +152,26 @@ export const ProgressView: React.FC<ProgressViewProps> = ({ sessions, prs }) => 
     s.exercises.forEach((e) => {
       if (muscleCounts[e.muscleGroup] !== undefined) {
         muscleCounts[e.muscleGroup] += e.sets.filter((x) => x.isCompleted).length;
+      } else if (e.muscleGroup === 'Arms') {
+        const nameLower = e.exerciseName.toLowerCase();
+        if (
+          nameLower.includes('tricep') ||
+          nameLower.includes('dip') ||
+          nameLower.includes('pushdown') ||
+          nameLower.includes('skull') ||
+          nameLower.includes('close-grip') ||
+          nameLower.includes('extension')
+        ) {
+          muscleCounts['Triceps'] += e.sets.filter((x) => x.isCompleted).length;
+        } else if (
+          nameLower.includes('wrist') ||
+          nameLower.includes('farmer') ||
+          nameLower.includes('hang')
+        ) {
+          muscleCounts['Forearms'] += e.sets.filter((x) => x.isCompleted).length;
+        } else {
+          muscleCounts['Biceps'] += e.sets.filter((x) => x.isCompleted).length;
+        }
       }
     });
   });

@@ -79,7 +79,7 @@ export const defaultRoutine: Routine = {
         {
           id: 'ex-tricep-pushdown',
           name: 'Triceps Pushdown',
-          muscleGroup: 'Arms',
+          muscleGroup: 'Triceps',
           targetSets: 3,
           targetRepsMin: 10,
           targetRepsMax: 15,
@@ -137,7 +137,7 @@ export const defaultRoutine: Routine = {
         {
           id: 'ex-bicep-curl',
           name: 'Incline Dumbbell Curl',
-          muscleGroup: 'Arms',
+          muscleGroup: 'Biceps',
           targetSets: 3,
           targetRepsMin: 10,
           targetRepsMax: 12,
@@ -147,7 +147,7 @@ export const defaultRoutine: Routine = {
         {
           id: 'ex-hammer-curl',
           name: 'Hammer Curl',
-          muscleGroup: 'Arms',
+          muscleGroup: 'Biceps',
           targetSets: 3,
           targetRepsMin: 10,
           targetRepsMax: 15,

@@ -29,7 +29,7 @@ export const ONBOARDING_SPLITS: SplitPreset[] = [
     description: '2-workout split alternating upper and lower body for balanced recovery and frequency.',
     recommendedDaysPerWeek: 4,
     daysCount: 2,
-    previewDays: ['Upper Body (Chest/Back/Arms)', 'Lower Body (Squats/Hamstrings/Calves)'],
+    previewDays: ['Upper Body (Chest/Back/Biceps & Triceps)', 'Lower Body (Squats/Hamstrings/Calves)'],
   },
   {
     id: 'full_body',
@@ -38,7 +38,7 @@ export const ONBOARDING_SPLITS: SplitPreset[] = [
     description: '1 balanced high-yield workout hitting all major muscle groups.',
     recommendedDaysPerWeek: 3,
     daysCount: 1,
-    previewDays: ['Full Body (Squat, Bench, Row, Shoulders, Arms)'],
+    previewDays: ['Full Body (Squat, Bench, Row, Shoulders, Biceps & Triceps)'],
   },
 ];
 
@@ -104,7 +104,7 @@ export function createRoutineFromSplit(
             {
               id: 'ex-ul-tricep',
               name: 'Triceps Pushdown',
-              muscleGroup: 'Arms',
+              muscleGroup: 'Triceps',
               targetSets: 3,
               targetRepsMin: 10,
               targetRepsMax: 12,
@@ -114,7 +114,7 @@ export function createRoutineFromSplit(
             {
               id: 'ex-ul-curl',
               name: 'Incline Dumbbell Curl',
-              muscleGroup: 'Arms',
+              muscleGroup: 'Biceps',
               targetSets: 3,
               targetRepsMin: 10,
               targetRepsMax: 12,
@@ -239,7 +239,7 @@ export function createRoutineFromSplit(
             {
               id: 'ex-fb-tricep',
               name: 'Triceps Pushdown',
-              muscleGroup: 'Arms',
+              muscleGroup: 'Triceps',
               targetSets: 2,
               targetRepsMin: 12,
               targetRepsMax: 15,
@@ -248,7 +248,7 @@ export function createRoutineFromSplit(
             {
               id: 'ex-fb-curl',
               name: 'Dumbbell Bicep Curl',
-              muscleGroup: 'Arms',
+              muscleGroup: 'Biceps',
               targetSets: 2,
               targetRepsMin: 10,
               targetRepsMax: 12,

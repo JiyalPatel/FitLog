@@ -55,7 +55,9 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
     'Back',
     'Shoulders',
     'Legs',
-    'Arms',
+    'Biceps',
+    'Triceps',
+    'Forearms',
     'Core',
   ];
 
@@ -132,6 +134,11 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
                 <div className="text-xs font-semibold text-white group-hover:text-white">
                   {ex.name}
                 </div>
+                {ex.description && (
+                  <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
+                    {ex.description}
+                  </p>
+                )}
                 <div className="flex items-center space-x-2 mt-1">
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-950 text-zinc-400 border border-zinc-800">
                     {ex.muscleGroup}
@@ -205,7 +212,9 @@ export const ExercisePickerModal: React.FC<ExercisePickerModalProps> = ({
                   <option value="Back">Back</option>
                   <option value="Shoulders">Shoulders</option>
                   <option value="Legs">Legs</option>
-                  <option value="Arms">Arms</option>
+                  <option value="Biceps">Biceps</option>
+                  <option value="Triceps">Triceps</option>
+                  <option value="Forearms">Forearms</option>
                   <option value="Core">Core</option>
                 </select>
                 <button

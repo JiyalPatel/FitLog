@@ -117,8 +117,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     runningVolume += dayVol;
 
     const isToday = now.toDateString() === dayDate.toDateString();
-    const isFuture = dayDate > now && !isToday;
-    const isPast = dayDate <= now;
+    const isPendingToday = isToday && dayVol === 0;
+    const isFuture = (dayDate > now && !isToday) || isPendingToday;
+    const isPast = dayDate <= now && !isPendingToday;
 
     return {
       day: name,
@@ -434,6 +435,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   tickLine={false}
                   axisLine={{ stroke: '#27272a' }}
                   tickFormatter={(val) => (val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}`)}
+                  domain={[0, (dataMax: number) => Math.max(1000, Math.ceil(dataMax * 1.15))]}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -447,11 +449,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 {data.day} ({data.dateLabel})
                               </span>
                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 font-bold">
-                                UPCOMING
+                                {data.isToday ? 'TODAY' : 'UPCOMING'}
                               </span>
                             </div>
                             <div className="text-zinc-500 text-[11px] pt-0.5">
-                              Upcoming Day
+                              {data.isToday ? 'Today in progress · No workouts logged yet' : 'Upcoming Day'}
                             </div>
                           </div>
                         );
@@ -573,8 +575,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="pt-2.5 border-t border-zinc-900 flex items-center justify-between gap-2">
           <span className="text-[10px] font-mono text-zinc-500 truncate min-w-0">
             {thisWeekTotalVolume > 0
-              ? 'Progressive load tracking active'
-              : 'Log your first workout to start tracking'}
+              ? 'Load tracking active'
+              : 'Log workout to start tracking'}
           </span>
           <button
             onClick={onViewProgress}

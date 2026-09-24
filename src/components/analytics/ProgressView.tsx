@@ -85,15 +85,19 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
     return allExerciseNames[0] || 'Barbell Bench Press';
   }, [selectedExercise, allExerciseNames]);
 
-  // Prepare exercise progression chart data
+  // Prepare exercise progression chart data (aggregated by calendar date to avoid duplicate X-axis ticks)
   const exerciseChartData = useMemo(() => {
-    const data: { date: string; value: number }[] = [];
+    const dateMap = new Map<string, { date: string; value: number; timestamp: number; sessionsCount: number }>();
+
     filteredCompleted.forEach((session) => {
       const ex = session.exercises.find(
         (e) => e.exerciseName.toLowerCase() === currentExercise.toLowerCase()
       );
       if (ex && ex.sets.length > 0) {
-        const dateLabel = new Date(session.startedAt).toLocaleDateString(undefined, {
+        const sDate = new Date(session.startedAt);
+        // Format ISO date string YYYY-MM-DD for grouping
+        const dateKey = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
+        const dateLabel = sDate.toLocaleDateString(undefined, {
           month: 'short',
           day: 'numeric',
         });
@@ -108,11 +112,27 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         }
 
         if (val > 0) {
-          data.push({ date: dateLabel, value: val });
+          const existing = dateMap.get(dateKey);
+          if (existing) {
+            if (metricType === 'volume') {
+              existing.value += val;
+            } else {
+              existing.value = Math.max(existing.value, val);
+            }
+            existing.sessionsCount += 1;
+          } else {
+            dateMap.set(dateKey, {
+              date: dateLabel,
+              value: val,
+              timestamp: sDate.getTime(),
+              sessionsCount: 1,
+            });
+          }
         }
       }
     });
-    return data;
+
+    return Array.from(dateMap.values()).sort((a, b) => a.timestamp - b.timestamp);
   }, [filteredCompleted, currentExercise, metricType]);
 
   // --- FULL WEEK VOLUME COMPARATOR DATA ---
@@ -214,7 +234,8 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         runningVolume += dayVol;
 
         const isToday = now.toDateString() === dayDate.toDateString();
-        const isFuture = isCurrent && dayDate > now && !isToday;
+        const isPendingToday = isCurrent && isToday && dayVol === 0;
+        const isFuture = (isCurrent && dayDate > now && !isToday) || isPendingToday;
 
         return {
           dayIndex: dayIdx,
@@ -1012,39 +1033,24 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
       </div>
 
       {/* 2. EXERCISE PROGRESSION CHART CARD */}
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-              EXERCISE PROGRESSION
-            </span>
-            <div className="mt-1">
-              <select
-                value={currentExercise}
-                onChange={(e) => setSelectedExercise(e.target.value)}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-mono font-semibold text-white focus:outline-none focus:border-zinc-500 max-w-[190px] truncate"
-              >
-                {allExerciseNames.length > 0 ? (
-                  allExerciseNames.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))
-                ) : (
-                  <option value={currentExercise}>{currentExercise}</option>
-                )}
-              </select>
-            </div>
-          </div>
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3.5 shadow-xl">
+        {/* Header Row: Label & Metric Toggle (Cleanly separated so neither overflows) */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 shrink-0">
+            <Dumbbell className="w-3.5 h-3.5 text-zinc-400" />
+            <span>EXERCISE PROGRESSION</span>
+          </span>
 
           {/* Metric Selector */}
-          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono">
+          <div className="flex items-center bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono shrink-0">
             {(['weight', '1rm', 'volume'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMetricType(m)}
-                className={`px-2 py-0.5 rounded uppercase ${
-                  metricType === m ? 'bg-white text-black font-bold' : 'text-zinc-400'
+                className={`px-2 py-0.5 rounded uppercase font-semibold transition-all ${
+                  metricType === m
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 {m}
@@ -1053,13 +1059,33 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
           </div>
         </div>
 
+        {/* Full-Width Exercise Dropdown */}
+        <div className="relative">
+          <select
+            value={currentExercise}
+            onChange={(e) => setSelectedExercise(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono font-semibold text-white focus:outline-none focus:border-zinc-500 appearance-none cursor-pointer pr-8"
+          >
+            {allExerciseNames.length > 0 ? (
+              allExerciseNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))
+            ) : (
+              <option value={currentExercise}>{currentExercise}</option>
+            )}
+          </select>
+          <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+
         {/* Timeframe Filter Pills */}
-        <div className="flex items-center space-x-1 p-0.5 rounded-lg bg-zinc-900 border border-zinc-800">
+        <div className="flex items-center p-0.5 rounded-xl bg-zinc-900 border border-zinc-800">
           {(['1W', '1M', '3M', 'All'] as const).map((tf) => (
             <button
               key={tf}
               onClick={() => setTimeframe(tf)}
-              className={`flex-1 py-1 rounded text-[10px] font-mono font-medium transition-all ${
+              className={`flex-1 py-1 rounded-lg text-[10px] font-mono font-medium transition-all ${
                 timeframe === tf
                   ? 'bg-white text-black shadow-sm font-bold'
                   : 'text-zinc-500 hover:text-zinc-300'
@@ -1077,38 +1103,51 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
               <LineChart data={exerciseChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis
                   dataKey="date"
-                  stroke="#52525b"
+                  stroke="#71717a"
                   fontSize={10}
                   tickLine={false}
                   axisLine={{ stroke: '#27272a' }}
+                  padding={{ left: 16, right: 16 }}
                 />
                 <YAxis
-                  stroke="#52525b"
+                  stroke="#71717a"
                   fontSize={10}
                   tickLine={false}
                   axisLine={{ stroke: '#27272a' }}
-                  domain={['dataMin - 5', 'dataMax + 5']}
+                  domain={[0, (dataMax: number) => Math.max(10, Math.ceil(dataMax * 1.2))]}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#09090b',
-                    borderColor: '#27272a',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    fontFamily: 'monospace',
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 shadow-2xl font-mono text-xs text-white space-y-1">
+                          <div className="font-bold text-zinc-400 text-[11px]">
+                            {data.date}
+                          </div>
+                          <div className="text-white font-bold flex items-baseline gap-1.5 pt-0.5">
+                            <span className="text-sm font-bold">{data.value.toLocaleString()}</span>
+                            <span className="text-[10px] text-zinc-400 uppercase">
+                              {weightUnit} {metricType.toUpperCase()}
+                            </span>
+                          </div>
+                          {data.sessionsCount > 1 && (
+                            <div className="text-[9px] text-zinc-500 pt-0.5 border-t border-zinc-900">
+                              Peak of {data.sessionsCount} sessions that day
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
-                  itemStyle={{ color: '#ffffff' }}
-                  formatter={(val: any) => [
-                    `${val} ${metricType === 'volume' ? weightUnit : weightUnit}`,
-                    metricType.toUpperCase(),
-                  ]}
                 />
                 <Line
                   type="monotone"
                   dataKey="value"
                   stroke="#ffffff"
                   strokeWidth={2}
-                  dot={{ fill: '#ffffff', strokeWidth: 2, r: 3 }}
+                  dot={{ fill: '#ffffff', strokeWidth: 1.5, r: 3.5 }}
                   activeDot={{ r: 5, fill: '#ffffff', stroke: '#000000', strokeWidth: 2 }}
                 />
               </LineChart>

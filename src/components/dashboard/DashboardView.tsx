@@ -1,29 +1,29 @@
 import React, { useState } from 'react';
-import { 
-  Play, 
-  Flame, 
-  AlertCircle, 
-  TrendingUp, 
-  TrendingDown, 
-  Award, 
-  ChevronRight, 
-  Clock, 
-  Sparkles, 
-  Moon, 
-  CheckCircle2, 
-  SkipForward, 
-  Scale, 
-  Plus, 
-  Activity 
+import {
+  Play,
+  Flame,
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Award,
+  ChevronRight,
+  Clock,
+  Sparkles,
+  Moon,
+  CheckCircle2,
+  SkipForward,
+  Scale,
+  Plus,
+  Activity
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
 import { Routine, WorkoutSession, PersonalRecord, ProgressiveOverloadTip, WeeklySummaryStats, WeightEntry, WeightGoal } from '../../types';
 import { getNextWorkoutQueue, getUpcomingQueue } from '../../services/engine/rollingQueue';
@@ -356,27 +356,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 2.2 Weekly Performance Volume Line Graph Card */}
       <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 space-y-3 shadow-xl">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center space-x-2 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 whitespace-nowrap">
-              <Activity className="w-3.5 h-3.5 text-white" />
-              WEEKLY VOLUME
+              <Activity className="w-3.5 h-3.5 text-white shrink-0" />
+              <span>WEEKLY VOLUME</span>
             </span>
             {volumeChangePercent > 0 ? (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-white border border-zinc-800 flex items-center gap-1 font-bold shrink-0">
+              <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full bg-zinc-900 text-white border border-zinc-800 flex items-center gap-0.5 sm:gap-1 font-bold shrink-0">
                 <TrendingUp className="w-3 h-3 text-white" /> +{volumeChangePercent}%
               </span>
             ) : volumeChangePercent < 0 ? (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 flex items-center gap-0.5 sm:gap-1 shrink-0">
                 <TrendingDown className="w-3 h-3 text-zinc-400" /> {volumeChangePercent}%
               </span>
             ) : null}
           </div>
 
-          <div className="flex items-center space-x-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono shrink-0">
+          <div className="flex items-center bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono shrink-0">
             <button
               onClick={() => setHomeVolumeMode('daily')}
-              className={`px-2.5 py-1 rounded transition-colors whitespace-nowrap ${
+              className={`px-2 sm:px-2.5 py-1 rounded transition-all whitespace-nowrap ${
                 homeVolumeMode === 'daily'
                   ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
@@ -386,7 +386,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
             <button
               onClick={() => setHomeVolumeMode('trend')}
-              className={`px-2.5 py-1 rounded transition-colors whitespace-nowrap ${
+              className={`px-2 sm:px-2.5 py-1 rounded transition-all whitespace-nowrap ${
                 homeVolumeMode === 'trend'
                   ? 'bg-white text-black font-bold shadow-sm'
                   : 'text-zinc-400 hover:text-white'
@@ -598,11 +598,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
             {weightStats.totalChange !== 0 && weightEntries.length > 1 && (
               <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                  weightStats.totalChange < 0
-                    ? 'bg-zinc-900 text-emerald-400 border-emerald-500/20'
-                    : 'bg-zinc-900 text-amber-400 border-amber-500/20'
-                }`}
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${weightStats.totalChange < 0
+                  ? 'bg-zinc-900 text-emerald-400 border-emerald-500/20'
+                  : 'bg-zinc-900 text-amber-400 border-amber-500/20'
+                  }`}
               >
                 {weightStats.totalChange > 0 ? `+${weightStats.totalChange}` : weightStats.totalChange} {weightUnit}
               </span>
@@ -630,8 +629,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {weightGoal?.targetWeight
                 ? `Target: ${weightGoal.targetWeight} ${weightUnit}`
                 : weightStats.currentWeight !== null
-                ? 'Current weight'
-                : 'No weight entered yet'}
+                  ? 'Current weight'
+                  : 'No weight entered yet'}
             </p>
           </div>
 
@@ -665,11 +664,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div
                 key={`${day.id}-${idx}`}
-                className={`min-w-[130px] flex-shrink-0 p-3 rounded-xl border transition-all ${
-                  isCurrent
-                    ? 'bg-zinc-900/90 border-white/40 shadow-glow-sm'
-                    : 'bg-zinc-950/60 border-zinc-900 text-zinc-500'
-                }`}
+                className={`min-w-[130px] flex-shrink-0 p-3 rounded-xl border transition-all ${isCurrent
+                  ? 'bg-zinc-900/90 border-white/40 shadow-glow-sm'
+                  : 'bg-zinc-950/60 border-zinc-900 text-zinc-500'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-mono tracking-wide uppercase">
@@ -761,8 +759,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     {pr.prType === 'weight'
                       ? `${pr.weight} ${weightUnit} × ${pr.reps}`
                       : pr.prType === '1rm'
-                      ? `~${pr.prValue} ${weightUnit} (1RM)`
-                      : `${pr.prValue} ${weightUnit} vol`}
+                        ? `~${pr.prValue} ${weightUnit} (1RM)`
+                        : `${pr.prValue} ${weightUnit} vol`}
                   </div>
                   <span className="text-[10px] font-mono text-zinc-400 uppercase">
                     {pr.prType} PR
